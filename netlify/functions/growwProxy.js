@@ -1,28 +1,25 @@
 const GROWW_API_BASE = 'https://api.groww.in/v1';
-const GROWW_API_KEY = process.env.GROWW_API_KEY;
-const GROWW_API_SECRET = process.env.GROWW_API_SECRET;
-
-let accessToken = null;  // Add semicolon - null was being parsed as string
-let tokenExpiry = 0;
-
-const crypto = require('crypto');
+const GROWW_ACCESS_TOKEN = process.env.GROWW_ACCESS_TOKEN;
 
 async function getAccessToken() {
-  if (accessToken && accessToken.length > 20 && Date.now() < tokenExpiry) {
-    console.log('Using cached token');
-    return accessToken;
-  }
+  return GROWW_ACCESS_TOKEN;
+}
   
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const checksum = crypto.createHash('sha256').update(GROWW_API_SECRET + timestamp).digest('hex');
+  const secretTrimmed = (GROWW_API_SECRET || '').trim();
+  const checksum = crypto.createHash('sha256').update(secretTrimmed + timestamp).digest('hex');
   
-  console.log('Generating token, timestamp:', timestamp);
-  console.log('Checksum (sha256):', checksum);
+  console.log('--- TOKEN DEBUG ---');
+  console.log('API_KEY:', GROWW_ACCESS_TOKEN?.length, 'chars');
+  console.log('SECRET:', secretTrimmed.length, 'chars');
+  console.log('TIMESTAMP:', timestamp);
+  console.log('CHECKSUM:', checksum);
+  console.log('------------------');
   
   const response = await fetch(`${GROWW_API_BASE}/token/api/access`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${GROWW_API_KEY}`,
+      'Authorization': `Bearer ${GROWW_ACCESS_TOKEN}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
@@ -34,16 +31,16 @@ async function getAccessToken() {
   
   const responseText = await response.text();
   console.log('Token response status:', response.status);
-  console.log('Token response body:', responseText.substring(0, 300));
+  console.log('Token response:', responseText.substring(0, 200));
   
   if (!response.ok) {
-    throw new Error(`Token generation failed: ${response.status} - ${responseText}`);
+    throw new Error(`Token generation failed: ${response.status}`);
   }
   
   const data = JSON.parse(responseText);
   accessToken = data.token;
   tokenExpiry = Date.now() + (23 * 60 * 60 * 1000);
-  console.log('Token generated successfully');
+  console.log('Token generated OK');
   return accessToken;
 }
 
@@ -114,8 +111,8 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: '' };
   }
 
-  if (!GROWW_API_KEY) {
-    return { statusCode: 401, headers, body: JSON.stringify({ error: 'GROWW_API_KEY not configured' }) };
+  if (!GROWW_ACCESS_TOKEN) {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'GROWW_ACCESS_TOKEN not configured' }) };
   }
 
   try {
@@ -261,7 +258,7 @@ exports.handler = async (event) => {
         } catch (e) {
           responseData = { 
             status: 'error',
-            envConfigured: !!GROWW_API_KEY,
+            envConfigured: !!GROWW_ACCESS_TOKEN,
             hasSecret: !!GROWW_API_SECRET,
             error: e.message
           };
@@ -288,7 +285,7 @@ exports.handler = async (event) => {
       headers, 
       body: JSON.stringify({ 
         error: error.message,
-        hasApiKey: !!GROWW_API_KEY,
+        hasApiKey: !!GROWW_ACCESS_TOKEN,
         hasSecret: !!GROWW_API_SECRET
       }) 
     };
