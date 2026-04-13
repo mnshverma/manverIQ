@@ -100,10 +100,7 @@ def main():
         st.markdown("---")
         
         # Nav
-        page = st.radio_navigation(
-            "Menu",
-            ["Dashboard", "Search", "About"]
-        )
+        page = st.radio("Menu", ["Dashboard", "Search", "About"])
         
         st.markdown("---")
         st.caption("Data: NSE India\n⚠️ Research only")
