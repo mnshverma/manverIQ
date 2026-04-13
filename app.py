@@ -4,12 +4,18 @@ import warnings
 warnings.filterwarnings('ignore')
 import time
 
+import streamlit as st
+import pandas as pd
+import warnings
+warnings.filterwarnings('ignore')
+import time
+
 try:
     from nselib import capital_market
-    print("nselib loaded successfully")
-except Exception as e:
-    print(f"nselib import error: {e}")
+    from nselib import indices
+except:
     capital_market = None
+    indices = None
 
 try:
     from nsetools import nse
@@ -72,59 +78,53 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 def get_top_movers_nselib():
-    if not capital_market:
-        return None
-    try:
-        with st.spinner('Loading market data...'):
-            nifty_50 = capital_market.nifty50_equity_list()
-            df = pd.DataFrame(nifty_50)
-            st.write("Columns:", df.columns.tolist())
-            st.write(df.head(2))
-            
-            # Find the change column
-            change_col = None
-            for col in ['pctChange', 'pct_change', 'change', 'pctChg']:
-                if col in df.columns:
-                    change_col = col
-                    break
-            
-            if change_col:
-                df = df.sort_values(change_col, ascending=False)
-                return df
+    # Try using nsetools first for top gainers/losers
+    if nse_stock:
+        try:
+            gainers = nse_stock.get_top_gainers()
+            losers = nse_stock.get_top_losers()
+            return gainers, losers
+        except Exception as e:
+            st.error(f"nsetools error: {e}")
+    
+    # Fallback to nselib indices
+    if indices:
+        try:
+            live_data = indices.live_index_performances()
+            df = pd.DataFrame(live_data)
+            df = df.sort_values('perChange', ascending=False)
             return df
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
-        import traceback
-        st.code(traceback.format_exc())
-        return None
+        except Exception as e:
+            st.error(f"nselib indices error: {e}")
+    
+    return None
 
 def get_quote_nselib(symbol):
-    if not capital_market:
-        return None
-    try:
-        quote = capital_market.nifty50_equity_list()
-        df = pd.DataFrame(quote)
-        stock = df[df['symbol'] == symbol.upper()]
-        if not stock.empty:
-            return stock.iloc[0].to_dict()
-        return None
-    except:
-        return None
-
-def get_historical_nselib(symbol):
-    try:
-        from nselib import capital_market
-        hist = capital_market.nifty_historical_data(symbol=symbol, series='EQ')
-        if hist:
-            df = pd.DataFrame(hist)
-            return df.tail(100)
-        return None
-    except:
-        return None
+    if nse_stock:
+        try:
+            quote = nse_stock.get_quote(symbol.upper())
+            if quote:
+                return {
+                    'symbol': quote.get('symbol'),
+                    'companyName': quote.get('companyName'),
+                    'lastPrice': quote.get('lastPrice'),
+                    'open': quote.get('open'),
+                    'high': quote.get('dayHigh'),
+                    'low': quote.get('dayLow'),
+                    'pctChange': quote.get('pctChange')
+                }
+        except:
+            pass
+    return None
 
 def search_stocks(query):
-    if not capital_market:
-        return pd.DataFrame()
+    if nse_stock:
+        try:
+            matches = nse_stock.get_eq_symbol_list(query.upper())
+            return matches[:10]
+        except:
+            pass
+    return []
     try:
         quote = capital_market.nifty50_equity_list()
         df = pd.DataFrame(quote)
@@ -137,6 +137,8 @@ def search_stocks(query):
         return pd.DataFrame()
 
 def format_change(change):
+    if change is None:
+        return "0.00%"
     if change > 0:
         return f"+{change:.2f}%"
     return f"{change:.2f}%"
@@ -200,11 +202,12 @@ def main():
     
     if search_query:
         results = search_stocks(search_query)
-        if not results.empty:
+        if results:
             st.markdown("### Search Results")
-            for _, row in results.iterrows():
-                if st.button(f"**{row['symbol']}** - {row['companyName']}", key=row['symbol']):
-                    st.session_state.selected_stock = row['symbol']
+            for item in results:
+                label = f"**{item}**" if isinstance(item, str) else f"**{item}**"
+                if st.button(label, key=str(item)):
+                    st.session_state.selected_stock = item if isinstance(item, str) else item
                     st.rerun()
         else:
             st.warning("No results found")
@@ -215,48 +218,66 @@ def main():
     
     with col1:
         st.markdown("### 🔼 Top Gainers")
-        df = get_top_movers_nselib()
-        if df is not None:
-            gainers = df.head(10)
-            for _, row in gainers.iterrows():
-                show_stock_card(
-                    row.get('symbol', ''),
-                    row.get('companyName', ''),
-                    row.get('lastPrice', 0),
-                    float(row.get('pctChange', 0))
-                )
+        result = get_top_movers_nselib()
+        if result is not None:
+            if isinstance(result, tuple):
+                gainers, _ = result
+                for stock in gainers[:10]:
+                    show_stock_card(
+                        stock.get('symbol', ''),
+                        stock.get('companyName', ''),
+                        stock.get('lastPrice', 0),
+                        float(stock.get('pctChange', 0))
+                    )
+            else:
+                df = result.head(10)
+                for _, row in df.iterrows():
+                    show_stock_card(
+                        row.get('symbol', ''),
+                        row.get('companyName', ''),
+                        row.get('lastPrice', 0),
+                        float(row.get('perChange', 0))
+                    )
     
     with col2:
         st.markdown("### 🔽 Top Losers")
-        if df is not None:
-            losers = df.tail(10)
-            for _, row in losers.iterrows():
-                show_stock_card(
-                    row.get('symbol', ''),
-                    row.get('companyName', ''),
-                    row.get('lastPrice', 0),
-                    float(row.get('pctChange', 0))
-                )
+        if result is not None:
+            if isinstance(result, tuple):
+                _, losers = result
+                for stock in losers[:10]:
+                    show_stock_card(
+                        stock.get('symbol', ''),
+                        stock.get('companyName', ''),
+                        stock.get('lastPrice', 0),
+                        float(stock.get('pctChange', 0))
+                    )
+            else:
+                df = result.tail(10)
+                for _, row in df.iterrows():
+                    show_stock_card(
+                        row.get('symbol', ''),
+                        row.get('companyName', ''),
+                        row.get('lastPrice', 0),
+                        float(row.get('perChange', 0))
+                    )
     
     st.markdown("---")
     st.markdown("### 📊 Weekly Opportunities")
     
-    if df is not None:
-        df_filtered = df[
-            (df['pctChange'] > 2) | 
-            (df['pctChange'] < -2)
-        ].head(10)
-        
-        for _, row in df_filtered.iterrows():
-            change = float(row.get('pctChange', 0))
-            st.markdown(f"""
-            <div class="stock-card">
-                <div style="display:flex; justify-content:space-between;">
-                    <span style="font-weight:bold;">{row.get('symbol')}</span>
-                    <span class="{'positive' if change > 0 else 'negative'}">{format_change(change)}</span>
+    if result is not None:
+        if isinstance(result, tuple):
+            gainers, losers = result
+            stocks = gainers[:5] + losers[:5]
+            for stock in stocks:
+                change = float(stock.get('pctChange', 0))
+                st.markdown(f"""
+                <div class="stock-card">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="font-weight:bold;">{stock.get('symbol')}</span>
+                        <span class="{'positive' if change > 0 else 'negative'}">{format_change(change)}</span>
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
     
     st.markdown("---")
     
