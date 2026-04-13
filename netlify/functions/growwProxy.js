@@ -4,45 +4,6 @@ const GROWW_ACCESS_TOKEN = process.env.GROWW_ACCESS_TOKEN;
 async function getAccessToken() {
   return GROWW_ACCESS_TOKEN;
 }
-  
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-  const secretTrimmed = (GROWW_API_SECRET || '').trim();
-  const checksum = crypto.createHash('sha256').update(secretTrimmed + timestamp).digest('hex');
-  
-  console.log('--- TOKEN DEBUG ---');
-  console.log('API_KEY:', GROWW_ACCESS_TOKEN?.length, 'chars');
-  console.log('SECRET:', secretTrimmed.length, 'chars');
-  console.log('TIMESTAMP:', timestamp);
-  console.log('CHECKSUM:', checksum);
-  console.log('------------------');
-  
-  const response = await fetch(`${GROWW_API_BASE}/token/api/access`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${GROWW_ACCESS_TOKEN}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      key_type: 'approval',
-      checksum: checksum,
-      timestamp: timestamp
-    })
-  });
-  
-  const responseText = await response.text();
-  console.log('Token response status:', response.status);
-  console.log('Token response:', responseText.substring(0, 200));
-  
-  if (!response.ok) {
-    throw new Error(`Token generation failed: ${response.status}`);
-  }
-  
-  const data = JSON.parse(responseText);
-  accessToken = data.token;
-  tokenExpiry = Date.now() + (23 * 60 * 60 * 1000);
-  console.log('Token generated OK');
-  return accessToken;
-}
 
 const CACHE_TTL = 5 * 60 * 1000;
 const CANDLE_CACHE_TTL = 15 * 60 * 1000;
