@@ -78,10 +78,24 @@ def get_top_movers_nselib():
         with st.spinner('Loading market data...'):
             nifty_50 = capital_market.nifty50_equity_list()
             df = pd.DataFrame(nifty_50)
-            df = df.sort_values('pctChange', ascending=False)
+            st.write("Columns:", df.columns.tolist())
+            st.write(df.head(2))
+            
+            # Find the change column
+            change_col = None
+            for col in ['pctChange', 'pct_change', 'change', 'pctChg']:
+                if col in df.columns:
+                    change_col = col
+                    break
+            
+            if change_col:
+                df = df.sort_values(change_col, ascending=False)
+                return df
             return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
+        import traceback
+        st.code(traceback.format_exc())
         return None
 
 def get_quote_nselib(symbol):
