@@ -52,47 +52,24 @@ async function growwFetch(accessToken, endpoint, queryParams = {}) {
 async function getAccessToken() {
   const API_KEY = process.env.GROWW_API_KEY;
   const SECRET = process.env.GROWW_SECRET;
-  const TOTP_TOKEN = process.env.GROWW_TOTP_TOKEN;
-  const TOTP_SECRET = process.env.GROWW_TOTP_SECRET;
 
   if (!API_KEY) {
     throw new Error('GROWW_API_KEY not configured');
   }
 
-  let accessToken;
-
-  if (TOTP_TOKEN && TOTP_SECRET) {
-    try {
-      const TOTP = require('totp-generator');
-      const totp = TOTP(TOTP_SECRET);
-      
-      const response = await fetch(`${GROWW_API_BASE}/auth/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: TOTP_TOKEN, totp })
-      });
-      
-      if (!response.ok) throw new Error('TOTP authentication failed');
-      const data = await response.json();
-      accessToken = data.access_token;
-    } catch (e) {
-      console.log('TOTP not available, using API key flow');
-    }
-  } else if (SECRET) {
-    const response = await fetch(`${GROWW_API_BASE}/auth/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: API_KEY, secret: SECRET })
-    });
-    
-    if (!response.ok) throw new Error('API Key/Secret authentication failed');
-    const data = await response.json();
-    accessToken = data.access_token;
-  } else {
-    throw new Error('Provide either TOTP_TOKEN+TOTP_SECRET or API_KEY+SECRET');
+  if (!SECRET) {
+    throw new Error('GROWW_SECRET not configured');
   }
 
-  return accessToken;
+  const response = await fetch(`${GROWW_API_BASE}/auth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: API_KEY, secret: SECRET })
+  });
+  
+  if (!response.ok) throw new Error('API Key/Secret authentication failed');
+  const data = await response.json();
+  return data.access_token;
 }
 
 exports.handler = async (event) => {
