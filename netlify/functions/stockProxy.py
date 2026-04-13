@@ -4,6 +4,8 @@ warnings.filterwarnings('ignore')
 
 import pandas as pd
 
+from netlify_functions import handler
+
 try:
     from nselib import capital_market
 except:
@@ -197,6 +199,9 @@ def search_stocks_nselib(query):
         return []
 
 def handler(event, context):
+    """
+    Netlify Python function handler with CORS support.
+    """
     action = event.get('queryStringParameters', {}).get('action', '')
     
     headers = {
