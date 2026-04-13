@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
+from io import StringIO
 from datetime import datetime, timedelta
 
 st.set_page_config(page_title="ManverIQ", page_icon="📈", layout="wide")
@@ -33,53 +34,111 @@ POPULAR_STOCKS = [
     'ASIANPAINT', 'MARUTI', 'TITAN', 'ULTRACEMCO', 'SUNPHARMA', 'ONGC', 'NTPC'
 ]
 
-@st.cache_data(ttl=60)
-def fetch_nse_data():
-    """Fetch live data from NSE's live endpoint"""
+@st.cache_data(ttl=300)  # Cache for 5 minutes
+def fetch_bhavcopy():
+    """Fetch NSE bhavcopy - FREE daily data"""
     try:
-        # Try NSE's live market data API
+        # NSE bhavcopy CSV URL
+        url = "https://archives.nseindia.com/products/content/sec_bhavdata_all.csv"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Referer': 'https://www.nseindia.com/'
+        }
+        
+        resp = requests.get(url, headers=headers, timeout=30)
+        
+        if resp.status_code == 200:
+            df = pd.read_csv(StringIO(resp.text))
+            return df
+    except Exception as e:
+        print(f"Bhavcopy error: {e}")
+    
+    return None
+
+@st.cache_data(ttl=60)
+def fetch_live_nse():
+    """Fetch from NSE's live market data endpoint"""
+    try:
+        # Try NSE live index API
         url = "https://api.nseindia.com/marketdata/current-prices"
+        
         headers = {
             'User-Agent': 'Mozilla/5.0',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Referer': 'https://www.nseindia.com/'
         }
+        
         resp = requests.get(url, headers=headers, timeout=10)
         
         if resp.status_code == 200:
-            data = resp.json()
-            return data.get('data', [])
+            return resp.json().get('data', [])
     except Exception as e:
-        print(f"NSE API error: {e}")
+        print(f"Live API error: {e}")
     
-    # Fallback: return mock data for demo
     return []
 
 def get_stock_data(symbol):
-    """Get single stock data"""
-    data = fetch_nse_data()
+    """Get stock data from bhavcopy"""
+    df = fetch_bhavcopy()
     
-    # Search in live data
-    for obj in data:
-        if obj.get('symbol', '').upper() == symbol.upper():
-            return obj
+    if df is not None and 'SYMBOL' in df.columns:
+        stock = df[df['SYMBOL'] == symbol.upper()]
+        if not stock.empty:
+            row = stock.iloc[0]
+            return {
+                'symbol': row['SYMBOL'],
+                'companyName': row['SYMBOL'],  # Use symbol as name
+                'lastPrice': row['CLOSE'],
+                'pctChange': ((row['CLOSE'] - row['PREVCLOSE']) / row['PREVCLOSE'] * 100) if row['PREVCLOSE'] > 0 else 0,
+                'open': row['OPEN'],
+                'dayHigh': row['HIGH'],
+                'dayLow': row['LOW'],
+                'previousClose': row['PREVCLOSE']
+            }
     
     return None
 
 def get_top_movers():
-    """Get top gainers/losers"""
-    data = fetch_nse_data()
+    """Get top gainers and losers from bhavcopy"""
+    df = fetch_bhavcopy()
     
-    # If no data, show error - no mock data
-    if not data:
+    if df is None or 'SYMBOL' not in df.columns:
         return [], []
     
-    # Process real data
-    data.sort(key=lambda x: x.get('pctChange', 0), reverse=True)
+    # Calculate % change
+    df['pctChange'] = ((df['CLOSE'] - df['PREVCLOSE']) / df['PREVCLOSE'] * 100
+    df = df[df['PREVCLOSE'] > 0]  # Filter valid rows
     
-    gainers = [d for d in data[:10] if d.get('pctChange', 0) > 0]
-    losers = [d for d in data[-10:] if d.get('pctChange', 0) < 0]
+    # Sort by change
+    df = df.sort_values('pctChange', ascending=False)
+    
+    gainers = df.head(15).to_dict('records')
+    losers = df.tail(15).to_dict('records')
+    
+    # Format for display
+    for g in gainers:
+        g['symbol'] = g.get('SYMBOL', '')
+        g['companyName'] = g.get('SYMBOL', '')
+        g['lastPrice'] = g.get('CLOSE', 0)
+    
+    for l in losers:
+        l['symbol'] = l.get('SYMBOL', '')
+        l['companyName'] = l.get('SYMBOL', '')
+        l['lastPrice'] = l.get('CLOSE', 0)
     
     return gainers, losers
+
+def get_nifty():
+    """Get Nifty from live API or return None"""
+    data = fetch_live_nse()
+    
+    for obj in data:
+        if obj.get('symbol', '') == 'NIFTY 50':
+            return obj
+    
+    return None
 
 def fmt_price(p):
     try:
@@ -106,6 +165,27 @@ def get_quote(sym):
     """Get stock quote"""
     return get_stock_data(sym)
 
+def fmt_price(p):
+    try:
+        if p is None or p == '': return "₹--"
+        return f"₹{float(p):,.2f}"
+    except: return "₹--"
+
+def fmt_change(v):
+    try:
+        if v is None or v == '': return "0.00%"
+        v = float(v)
+        return f"+{v:.2f}%" if v >= 0 else f"{v:.2f}%"
+    except: return "0.00%"
+
+def get_nifty():
+    """Get Nifty 50 index"""
+    data = fetch_live_nse()
+    for obj in data:
+        if obj.get('symbol', '') == 'NIFTY 50':
+            return obj
+    return None
+
 # Sidebar
 with st.sidebar:
     st.markdown("### 📈 ManverIQ")
@@ -115,12 +195,14 @@ with st.sidebar:
     if nifty:
         chg = nifty.get('pctChange', 0)
         st.metric("NIFTY 50", fmt_price(nifty.get('lastPrice')), fmt_change(chg))
+    else:
+        st.caption("NSE data unavailable")
     
     st.markdown("---")
     page = st.radio("Menu", ["Dashboard", "Stock Details", "Search", "About"])
     
     st.markdown("---")
-    st.caption("Data: NSE India\n⚠️ Research only")
+    st.caption("Data: NSE India (BhavCopy)\n⚠️ Delayed by 1 day")
 
 # Main
 if page == "Dashboard":
@@ -130,7 +212,8 @@ if page == "Dashboard":
     gainers, losers = get_top_movers()
     
     if not gainers and not losers:
-        st.error("Unable to load market data. Try again later.")
+        st.warning("📊 NSE market data currently unavailable.")
+        st.caption("The bhavcopy CSV is updated daily after market close. Please check back on trading days.")
     else:
         # Tabs for Gainers/Losers
         tab_g, tab_l = st.tabs(["🔼 Top Gainers", "🔽 Top Losers"])
