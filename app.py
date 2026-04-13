@@ -96,7 +96,7 @@ def main():
         # Nifty 50 display
         ind = get_index()
         if ind:
-            st.metric("NIFTY 50", format_price(ind.get('lastPrice')), format Change(ind.get('pctChange')))
+            st.metric("NIFTY 50", format_price(ind.get('lastPrice')), format_change(ind.get('pctChange')))
         
         st.markdown("---")
         
@@ -136,7 +136,7 @@ def main():
                         </div>
                         <div style="text-align:right;">
                             <div>{format_price(s.get('lastPrice'))}</div>
-                            <div class="pos"><strong>{format Change(pc)}</strong></div>
+                            <div class="pos"><strong>{format_change(pc)}</strong></div>
                         </div>
                     </div>
                 </div>
@@ -156,7 +156,7 @@ def main():
                         </div>
                         <div style="text-align:right;">
                             <div>{format_price(s.get('lastPrice'))}</div>
-                            <div class="neg"><strong>{format Change(pc)}</strong></div>
+                            <div class="neg"><strong>{format_change(pc)}</strong></div>
                         </div>
                     </div>
                 </div>
