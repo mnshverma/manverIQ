@@ -20,6 +20,8 @@ export default function MarketDashboard() {
   const chartRef = useRef(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [marketStatus, setMarketStatus] = useState({ isOpen: false, status: 'Closed', nextOpen: '' });
+  const [error, setError] = useState(null);
+  const [errorType, setErrorType] = useState(null);
 
   const checkMarketStatus = () => {
     const now = new Date();
@@ -93,6 +95,7 @@ export default function MarketDashboard() {
   }, []);
 
   const loadInitialData = async () => {
+    setError(null);
     try {
       const response = await fetch(`${API_BASE}?action=topMovers`);
       if (response.ok) {
@@ -103,22 +106,32 @@ export default function MarketDashboard() {
           return;
         }
       }
+      const errorData = await response.json().catch(() => ({}));
+      setError(errorData.error || 'Failed to load market data');
+      setErrorType('data');
     } catch (e) {
-      console.log('API Error:', e.message);
+      setError('Unable to connect to server. Please check your internet connection.');
+      setErrorType('network');
     }
   };
 
   const fetchTopMovers = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await fetch(`${API_BASE}?action=topMovers`);
       if (response.ok) {
         const data = await response.json();
         if (data?.gainers) setGainers(data.gainers);
         if (data?.losers) setLosers(data.losers);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.error || 'Failed to load top movers');
+        setErrorType('data');
       }
     } catch (e) {
-      console.log('API Error:', e.message);
+      setError('Unable to connect to server');
+      setErrorType('network');
     }
     setLoading(false);
   };
@@ -130,8 +143,12 @@ export default function MarketDashboard() {
         const quoteData = await quoteResponse.json();
         return quoteData;
       }
+      const errorData = await quoteResponse.json().catch(() => ({}));
+      setError(errorData.error || 'Failed to fetch stock details');
+      setErrorType('stock');
     } catch (e) {
-      console.log('API Error:', e.message);
+      setError('Unable to connect to server');
+      setErrorType('network');
     }
     return null;
   };
@@ -175,10 +192,11 @@ export default function MarketDashboard() {
           return;
         }
       }
+      setSearchResults([]);
     } catch (e) {
-      console.log('Search API Error:', e.message);
+      setError('Search failed. Please try again.');
+      setErrorType('search');
     }
-    setSearchResults([]);
   };
 
   const handleSearchInput = (e) => {
@@ -261,8 +279,31 @@ export default function MarketDashboard() {
       throw new Error('No candle data available');
       
     } catch (e) {
-      console.log('API Error:', e.message);
+      setError(`Failed to load ${stock.symbol}: ${e.message}`);
+      setErrorType('stock');
       setLoading(false);
+    }
+  };
+
+  const dismissError = () => {
+    setError(null);
+    setErrorType(null);
+  };
+
+  const getErrorIcon = () => {
+    switch (errorType) {
+      case 'network': return '🌐';
+      case 'auth': return '🔐';
+      default: return '⚠️';
+    }
+  };
+
+  const getErrorDescription = () => {
+    switch (errorType) {
+      case 'network': return 'Please check your internet connection and try again.';
+      case 'auth': return 'API credentials may be invalid. Check environment variables.';
+      case 'data': return 'The data service may be temporarily unavailable.';
+      default: return 'Please try again later.';
     }
   };
 
@@ -405,6 +446,21 @@ export default function MarketDashboard() {
           </div>
         </header>
 
+        {error && (
+          <div className="bg-groww-red/10 border border-groww-red/30 rounded-xl p-4 flex items-start gap-3">
+            <span className="text-xl">{getErrorIcon()}</span>
+            <div className="flex-1">
+              <p className="text-white font-medium">{error}</p>
+              <p className="text-gray-400 text-sm mt-1">{getErrorDescription()}</p>
+            </div>
+            <button onClick={dismissError} className="text-gray-400 hover:text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSearch} className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
@@ -454,75 +510,86 @@ export default function MarketDashboard() {
                     </span>
                   </div>
                 </button>
-              ))}
-            </div>
+                  ))}
+                </div>
           )}
         </form>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-groww-card border border-groww-border rounded-xl p-5">
+          <div className="lg:col-span-1 space-y-4 md:space-y-6">
+            <div className="bg-groww-card border border-groww-border rounded-xl p-4 md:p-5">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-5 h-5 text-groww-green" />
                 <h2 className="text-lg font-semibold text-white">Top Gainers</h2>
               </div>
               <div className="space-y-2">
-                {gainers.map((stock, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => selectStock(stock)}
-                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-groww-border/50 transition-all border border-transparent hover:border-groww-green/20"
-                  >
-                    <div className="text-left">
-                      <div className="text-white font-medium">{stock.symbol}</div>
-                      <div className="text-gray-400 text-xs">{stock.name}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-white font-medium">₹{(stock.price || stock.last_price)?.toFixed(2)}</div>
-                      <div className="text-groww-green text-sm font-medium">{formatPercentage(stock.change || stock.day_change_perc)}</div>
-                    </div>
-                  </button>
-                ))}
+                {gainers.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    <p>No data</p>
+                  </div>
+                ) : (
+                  gainers.map((stock, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => selectStock(stock)}
+                      className="w-full flex items-center justify-between p-2 md:p-3 rounded-lg hover:bg-groww-border/50 transition-all text-left"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-white font-medium text-sm md:text-base">{stock.symbol}</div>
+                        <div className="text-gray-400 text-xs truncate">{stock.name}</div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-white font-medium text-sm">₹{(stock.price || stock.last_price)?.toFixed(2)}</div>
+                        <div className="text-groww-green text-xs">{formatPercentage(stock.change || stock.day_change_perc)}</div>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 
-            <div className="bg-groww-card border border-groww-border rounded-xl p-5">
+            <div className="bg-groww-card border border-groww-border rounded-xl p-4 md:p-5">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingDown className="w-5 h-5 text-groww-red" />
                 <h2 className="text-lg font-semibold text-white">Top Losers</h2>
               </div>
               <div className="space-y-2">
-                {losers.map((stock, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => selectStock(stock)}
-                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-groww-border/50 transition-all border border-transparent hover:border-groww-red/20"
-                  >
-                    <div className="text-left">
-                      <div className="text-white font-medium">{stock.symbol}</div>
-                      <div className="text-gray-400 text-xs">{stock.name}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-white font-medium">₹{(stock.price || stock.last_price)?.toFixed(2)}</div>
-                      <div className="text-groww-red text-sm font-medium">{formatPercentage(stock.change || stock.day_change_perc)}</div>
-                    </div>
-                  </button>
-                ))}
+                {losers.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    <p>No data</p>
+                  </div>
+                ) : (
+                  losers.map((stock, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => selectStock(stock)}
+                      className="w-full flex items-center justify-between p-2 md:p-3 rounded-lg hover:bg-groww-border/50 transition-all text-left"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-white font-medium text-sm md:text-base">{stock.symbol}</div>
+                        <div className="text-gray-400 text-xs truncate">{stock.name}</div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-white font-medium text-sm">₹{(stock.price || stock.last_price)?.toFixed(2)}</div>
+                        <div className="text-groww-red text-xs">{formatPercentage(stock.change || stock.day_change_perc)}</div>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           </div>
 
           <div className="lg:col-span-2">
-            {selectedStock ? (
-              <div className="bg-groww-card border border-groww-border rounded-xl p-6 space-y-6">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-groww-green/10 flex items-center justify-center">
-                      <BarChart3 className="w-7 h-7 text-groww-green" />
+              <div className="bg-groww-card border border-groww-border rounded-xl p-4 md:p-6 space-y-4 md:space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl bg-groww-green/10 flex items-center justify-center">
+                      <BarChart3 className="w-5 h-5 md:w-7 md:h-7 text-groww-green" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-white">{selectedStock.symbol}</h2>
-                      <p className="text-gray-400">{selectedStock.name}</p>
+                      <h2 className="text-xl md:text-2xl font-bold text-white">{selectedStock.symbol}</h2>
+                      <p className="text-gray-400 text-sm">{selectedStock.name}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -792,7 +859,7 @@ export default function MarketDashboard() {
                       ))}
                     </div>
                   </div>
-                  <div ref={chartContainerRef} className="w-full h-[350px]" />
+                  <div ref={chartContainerRef} className="w-full h-[250px] sm:h-[300px] md:h-[350px]" />
                 </div>
               </div>
             ) : (
