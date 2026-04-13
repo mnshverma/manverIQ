@@ -13,8 +13,7 @@ except Exception as e:
 st.set_page_config(
     page_title="ManverIQ", 
     page_icon="📈",
-    layout="wide",
-    page_config_changed="false"
+    layout="wide"
 )
 
 STYLES = """
