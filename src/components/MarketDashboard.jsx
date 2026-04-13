@@ -62,9 +62,62 @@ export default function MarketDashboard() {
   const [holdingPattern, setHoldingPattern] = useState(null);
   const [news, setNews] = useState([]);
   const [weeklyOpportunities, setWeeklyOpportunities] = useState([]);
+  const [marketStatus, setMarketStatus] = useState({ isOpen: false, status: 'Closed', nextOpen: '' });
+
+  const checkMarketStatus = () => {
+    const now = new Date();
+    const day = now.getDay();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const currentTime = hours * 60 + minutes;
+    
+    const marketOpen = 9 * 60 + 15;
+    const marketClose = 15 * 60 + 30;
+    
+    const isWeekday = day >= 1 && day <= 5;
+    const isMarketHours = currentTime >= marketOpen && currentTime < marketClose;
+    
+    let status = 'Closed';
+    let isOpen = false;
+    let nextOpen = '';
+    
+    if (isWeekday) {
+      if (isMarketHours) {
+        status = 'Market Open';
+        isOpen = true;
+      } else if (currentTime < marketOpen) {
+        status = 'Pre-Market';
+        isOpen = false;
+        const openTime = new Date(now);
+        openTime.setHours(9, 15, 0);
+        nextOpen = openTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      } else {
+        status = 'Closed';
+        isOpen = false;
+        const nextDay = new Date(now);
+        nextDay.setDate(nextDay.getDate() + 1);
+        while (nextDay.getDay() === 0 || nextDay.getDay() === 6) {
+          nextDay.setDate(nextDay.getDate() + 1);
+        }
+        nextOpen = nextDay.toLocaleDateString('en-IN', { weekday: 'short' }) + ' 9:15 AM';
+      }
+    } else {
+      const nextWeekday = new Date(now);
+      nextWeekday.setDate(nextWeekday.getDate() + 1);
+      while (nextWeekday.getDay() === 0 || nextWeekday.getDay() === 6) {
+        nextWeekday.setDate(nextWeekday.getDate() + 1);
+      }
+      nextOpen = nextWeekday.toLocaleDateString('en-IN', { weekday: 'short' }) + ' 9:15 AM';
+    }
+    
+    setMarketStatus({ isOpen, status, nextOpen });
+  };
 
   useEffect(() => {
     loadInitialData();
+    checkMarketStatus();
+    const interval = setInterval(checkMarketStatus, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -320,9 +373,12 @@ export default function MarketDashboard() {
             <p className="text-gray-400 text-sm mt-1">Research & Analysis Platform</p>
           </div>
           <div className="flex items-center gap-3 bg-groww-card px-4 py-2 rounded-lg border border-groww-border">
-            <div className="w-2 h-2 rounded-full bg-groww-green animate-pulse"></div>
-            <span className="text-sm text-gray-300">Market Open</span>
+            <div className={`w-2 h-2 rounded-full ${marketStatus.isOpen ? 'bg-groww-green animate-pulse' : 'bg-groww-red'}`}></div>
+            <span className={`text-sm ${marketStatus.isOpen ? 'text-gray-300' : 'text-groww-red'}`}>{marketStatus.status}</span>
             <span className="text-xs text-gray-500 ml-2">NSE</span>
+            {!marketStatus.isOpen && marketStatus.nextOpen && (
+              <span className="text-xs text-gray-500 ml-2">Next: {marketStatus.nextOpen}</span>
+            )}
           </div>
         </header>
 
