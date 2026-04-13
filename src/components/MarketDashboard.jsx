@@ -7,13 +7,107 @@ const API_BASE = '/.netlify/functions/growwProxy';
 
 const popularStocks = [
   { symbol: 'RELIANCE', name: 'Reliance Industries', price: 2856.45, change: 4.32 },
-  { symbol: 'TCS', name: 'Tata Consultancy', price: 3856.20, change: 3.18 },
+  { symbol: 'TCS', name: 'Tata Consultancy Services', price: 3856.20, change: 3.18 },
   { symbol: 'HDFCBANK', name: 'HDFC Bank', price: 1685.30, change: 2.87 },
   { symbol: 'INFY', name: 'Infosys', price: 1456.75, change: 2.54 },
   { symbol: 'NIFTY 50', name: 'Nifty 50', price: 22567.80, change: 1.25 },
   { symbol: 'SENSEX', name: 'BSE Sensex', price: 74850.25, change: 1.18 },
   { symbol: 'ITC', name: 'ITC Ltd', price: 425.60, change: 2.12 },
-  { symbol: 'SBIN', name: 'State Bank', price: 765.80, change: -1.34 }
+  { symbol: 'SBIN', name: 'State Bank of India', price: 765.80, change: -1.34 },
+  { symbol: 'HCLTECH', name: 'HCL Technologies', price: 1256.40, change: 1.85 },
+  { symbol: 'WIPRO', name: 'Wipro Ltd', price: 425.30, change: -1.56 },
+  { symbol: 'ICICIBANK', name: 'ICICI Bank', price: 985.60, change: 0.95 },
+  { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 1785.90, change: 1.42 },
+  { symbol: 'ADANIPORTS', name: 'Adani Ports', price: 1256.30, change: -2.15 },
+  { symbol: 'LT', name: 'Larsen & Toubro', price: 3256.80, change: 1.78 },
+  { symbol: 'BHARTIARTL', name: 'Bharti Airtel', price: 1456.20, change: 2.34 },
+  { symbol: 'ASIANPAINT', name: 'Asian Paints', price: 2856.40, change: -0.85 },
+  { symbol: 'TITAN', name: 'Titan Company', price: 3125.60, change: -1.89 },
+  { symbol: 'BAJFINANCE', name: 'Bajaj Finance', price: 6895.20, change: -2.98 },
+  { symbol: 'MARUTI', name: 'Maruti Suzuki', price: 12560.30, change: 1.65 },
+  { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical', price: 1585.60, change: 0.75 },
+  { symbol: 'TATASTEEL', name: 'Tata Steel', price: 165.80, change: -1.25 },
+  { symbol: 'JSWSTEEL', name: 'JSW Steel', price: 895.40, change: -0.95 },
+  { symbol: 'HINDUNILVR', name: 'Hindustan Unilever', price: 2685.30, change: 0.45 },
+  { symbol: 'DIVISLAB', name: 'Divis Laboratories', price: 4256.80, change: 2.15 },
+  { symbol: 'ULTRACEMCO', name: 'UltraTech Cement', price: 9856.40, change: -1.35 },
+  { symbol: 'NTPC', name: 'NTPC Ltd', price: 385.60, change: 0.85 },
+  { symbol: 'POWERGRID', name: 'Power Grid Corp', price: 285.40, change: 0.65 },
+  { symbol: 'ONGC', name: 'Oil & Natural Gas', price: 285.60, change: -2.15 },
+  { symbol: 'COALINDIA', name: 'Coal India', price: 485.30, change: -1.45 },
+  { symbol: 'VEDL', name: 'Vedanta Ltd', price: 425.80, change: -3.25 },
+  { symbol: 'ADANI', name: 'Adani Enterprises', price: 1285.40, change: -3.45 },
+  { symbol: 'AXISBANK', name: 'Axis Bank', price: 985.60, change: 1.25 },
+  { symbol: 'INDUSINDBK', name: 'IndusInd Bank', price: 1485.30, change: 0.95 },
+  { symbol: 'BANKBARODA', name: 'Bank of Baroda', price: 285.60, change: -0.75 },
+  { symbol: 'PNB', name: 'Punjab National Bank', price: 125.40, change: -1.85 },
+  { symbol: 'CANBK', name: 'Canara Bank', price: 485.60, change: -0.65 },
+  { symbol: 'BHEL', name: 'Bharat Heavy Electricals', price: 285.40, change: -2.45 },
+  { symbol: 'TATAMOTORS', name: 'Tata Motors', price: 785.60, change: 3.25 },
+  { symbol: 'EICHERMOT', name: 'Eicher Motors', price: 4256.80, change: 1.85 },
+  { symbol: 'HEROMOTOCO', name: 'Hero MotoCorp', price: 3285.40, change: -0.95 },
+  { symbol: 'BAJAJ-AUTO', name: 'Bajaj Auto', price: 9856.20, change: 0.75 },
+  { symbol: 'TVSMOTOR', name: 'TVS Motor', price: 2285.60, change: 2.15 },
+  { symbol: 'M&M', name: 'Mahindra & Mahindra', price: 2856.40, change: 1.45 },
+  { symbol: 'GRASIM', name: 'Grasim Industries', price: 2856.80, change: 0.85 },
+  { symbol: 'SHREECEM', name: 'Shree Cement', price: 22856.40, change: -1.25 },
+  { symbol: 'AMBUJACEM', name: 'Ambuja Cements', price: 585.60, change: -0.95 },
+  { symbol: 'ACC', name: 'ACC Ltd', price: 2285.40, change: -0.75 },
+  { symbol: 'ULTRACEMCO', name: 'UltraTech Cement', price: 9856.40, change: -1.35 },
+  { symbol: 'ADANIENSOL', name: 'Adani Energy Solutions', price: 1256.80, change: -2.85 },
+  { symbol: 'ADANIGREEN', name: 'Adani Green Energy', price: 1485.60, change: -4.15 },
+  { symbol: 'ADANITOTAL', name: 'Adani Total Gas', price: 856.40, change: -3.25 },
+  { symbol: 'GAIL', name: 'GAIL India', price: 185.60, change: -1.15 },
+  { symbol: 'BPCL', name: 'Bharat Petroleum', price: 385.40, change: -2.25 },
+  { symbol: 'IOC', name: 'Indian Oil Corp', price: 145.80, change: -1.85 },
+  { symbol: 'HINDPETRO', name: 'Hindustan Petroleum', price: 385.60, change: -2.45 },
+  { symbol: 'CIPLA', name: 'Cipla Ltd', price: 1285.40, change: 0.65 },
+  { symbol: 'DRREDDY', name: 'Dr Reddy Labs', price: 5856.80, change: 1.25 },
+  { symbol: 'ZYDUSLIFE', name: 'Zydus Lifesciences', price: 985.60, change: 0.45 },
+  { symbol: 'APOLLOHOSP', name: 'Apollo Hospitals', price: 6285.40, change: 1.85 },
+  { symbol: 'MAXHEALTH', name: 'Max Healthcare', price: 985.60, change: 2.15 },
+  { symbol: 'METROPOLIS', name: 'Metropolis Healthcare', price: 1585.40, change: 0.75 },
+  { symbol: 'LUPIN', name: 'Lupin Ltd', price: 1685.60, change: -0.85 },
+  { symbol: 'AUROPHARMA', name: 'Aurobindo Pharma', price: 985.40, change: -1.15 },
+  { symbol: 'GLENMARK', name: 'Glenmark Pharma', price: 885.60, change: -0.95 },
+  { symbol: 'CADILAHC', name: 'Cadila Healthcare', price: 585.80, change: -1.25 },
+  { symbol: 'TORNTPHARM', name: 'Torrent Pharma', price: 2285.40, change: 0.85 },
+  { symbol: 'SBILIFE', name: 'SBI Life Insurance', price: 1485.60, change: 1.45 },
+  { symbol: 'ICICIGI', name: 'ICICI Lombard', price: 1685.40, change: 1.25 },
+  { symbol: 'BAJAJINS', name: 'Bajaj Insurance', price: 1585.60, change: 0.95 },
+  { symbol: 'HDFCLIFE', name: 'HDFC Life Insurance', price: 685.40, change: 0.75 },
+  { symbol: 'MUTHOOTFIN', name: 'Muthoot Finance', price: 1585.80, change: 1.85 },
+  { symbol: 'CHOLAFIN', name: 'Cholamandalam Inv', price: 1285.60, change: 1.15 },
+  { symbol: 'BAJJFINSV', name: 'Bajaj Finserv', price: 15856.40, change: -1.95 },
+  { symbol: 'SHRIRAMFIN', name: 'Shriram Finance', price: 2285.60, change: 1.25 },
+  { symbol: 'PGHH', name: 'Procter & Gamble', price: 15856.80, change: 0.45 },
+  { symbol: 'COLPAL', name: 'Colgate Palmolive', price: 2856.40, change: 0.35 },
+  { symbol: 'DABUR', name: 'Dabur India', price: 585.60, change: 0.55 },
+  { symbol: 'MARICO', name: 'Marico Ltd', price: 625.40, change: 0.85 },
+  { symbol: 'GODREJCP', name: 'Godrej Consumer', price: 1285.60, change: 0.75 },
+  { symbol: 'TATACONSUM', name: 'Tata Consumer', price: 985.40, change: 1.15 },
+  { symbol: 'BRITANNIA', name: 'Britannia Industries', price: 4285.60, change: 0.45 },
+  { symbol: 'NESTLEIND', name: 'Nestle India', price: 22856.40, change: 0.25 },
+  { symbol: 'RADICO', name: 'Radico Khaitan', price: 1585.80, change: 2.15 },
+  { symbol: 'UBL', name: 'United Breweries', price: 4285.60, change: 1.25 },
+  { symbol: 'ABFRL', name: 'Aditya Birla Fashion', price: 285.40, change: -2.15 },
+  { symbol: 'DMART', name: 'Avenue Supermarts', price: 4585.60, change: 1.85 },
+  { symbol: 'NYKAA', name: 'FSN E-Commerce', price: 185.60, change: -3.45 },
+  { symbol: 'JUBLFOOD', name: 'Jubilant Foodworks', price: 585.40, change: -1.25 },
+  { symbol: 'ZOMATO', name: 'Zomato Ltd', price: 185.80, change: -2.85 },
+  { symbol: 'SWIGGY', name: 'Swiggy Ltd', price: 425.60, change: -4.15 },
+  { symbol: 'PAYTM', name: 'One97 Communications', price: 485.40, change: -3.25 },
+  { symbol: 'IRCTC', name: 'IRCTC Ltd', price: 985.60, change: 1.45 },
+  { symbol: 'RELIANCE', name: 'Reliance Industries', price: 2856.45, change: 4.32 },
+  { symbol: 'HFCL', name: 'HFCL Ltd', price: 125.60, change: 2.15 },
+  { symbol: 'VODAFONE', name: 'Vodafone Idea', price: 12.50, change: -5.25 },
+  { symbol: 'TATAELXSI', name: 'Tata Elxsi', price: 6856.40, change: 2.85 },
+  { symbol: 'TCS', name: 'Tata Consultancy Services', price: 3856.20, change: 3.18 },
+  { symbol: 'TECHM', name: 'Tech Mahindra', price: 1285.60, change: 1.45 },
+  { symbol: 'MPHASIS', name: 'Mphasis Ltd', price: 2285.40, change: 1.95 },
+  { symbol: 'PERSISTENT', name: 'Persistent Systems', price: 1585.80, change: 2.65 },
+  { symbol: 'COFORGE', name: 'Coforge Ltd', price: 5285.60, change: 3.15 },
+  { symbol: 'LTIM', name: 'LTI Mindtree', price: 5285.40, change: 2.85 }
 ];
 
 const generateMockCandles = (basePrice = 2800, days = 365) => {
@@ -198,6 +292,10 @@ export default function MarketDashboard() {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    performSearch();
+  };
+
+  const performSearch = () => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
       return;
@@ -208,6 +306,28 @@ export default function MarketDashboard() {
       s.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setSearchResults(filtered);
+  };
+
+  const handleSearchInput = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    if (value.trim()) {
+      performSearch();
+    } else {
+      setSearchResults([]);
+    }
+  };
+
+  const handleInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      performSearch();
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
   };
 
   const selectStock = async (stock) => {
@@ -387,13 +507,25 @@ export default function MarketDashboard() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={(e) => {
-              if (e.target.value.trim()) handleSearch(e);
+            onChange={handleSearchInput}
+            onKeyDown={handleInputKeyDown}
+            onFocus={() => {
+              if (searchQuery.trim()) performSearch();
             }}
             placeholder="Search stocks by name or symbol (e.g., RELIANCE, TCS, HDFCBANK)..."
-            className="w-full bg-groww-card border border-groww-border rounded-xl py-4 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-groww-green/50 transition-colors"
+            className="w-full bg-groww-card border border-groww-border rounded-xl py-4 pl-12 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-groww-green/50 transition-colors"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
           {searchResults.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-groww-card border border-groww-border rounded-xl overflow-hidden z-50 shadow-xl">
               {searchResults.map((stock, idx) => (
