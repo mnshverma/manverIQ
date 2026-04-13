@@ -43,15 +43,30 @@ POPULAR_STOCKS = [
 ]
 
 def get_top_movers():
-    if not nse_stock: return [], []
+    if not nse_stock: 
+        return [], []
     try:
-        return nse_stock.get_top_gainers() or [], nse_stock.get_top_losers() or []
-    except: return [], []
+        gainers = nse_stock.get_top_gainers()
+        losers = nse_stock.get_top_losers()
+        
+        # Debug: print first item keys
+        if gainers:
+            print("Gainer sample:", gainers[0].keys() if gainers else "empty")
+        return gainers or [], losers or []
+    except Exception as e:
+        print(f"Error: {e}")
+        return [], []
 
 def get_quote(sym):
     if not nse_stock: return None
-    try: return nse_stock.get_quote(sym.upper())
-    except: return None
+    try: 
+        q = nse_stock.get_quote(sym.upper())
+        if q:
+            print(f"Quote for {sym}:", q)
+        return q
+    except Exception as e:
+        print(f"Quote error: {e}")
+        return None
 
 def get_nifty():
     if not nse_stock: return None
@@ -59,11 +74,14 @@ def get_nifty():
     except: return None
 
 def fmt_price(p):
-    try: return f"₹{float(p):,.2f}"
-    except: return "₹0"
+    try: 
+        if p is None or p == '': return "₹--"
+        return f"₹{float(p):,.2f}"
+    except: return "₹--"
 
 def fmt_change(v):
     try:
+        if v is None or v == '': return "0.00%"
         v = float(v)
         return f"+{v:.2f}%" if v >= 0 else f"{v:.2f}%"
     except: return "0.00%"
