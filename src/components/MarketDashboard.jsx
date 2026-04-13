@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { TrendingUp, TrendingDown, Search, Loader2, BarChart3, Activity, Target, Clock, Trending, LineChart } from 'lucide-react';
+import { TrendingUp, TrendingDown, Search, Loader2, BarChart3, Activity, Target, Clock, Trending, LineChart, Newspaper, Users, Flame, AlertCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import { createChart, CrosshairMode } from 'lightweight-charts';
-import { calculateTrend, formatMarketCap, formatPercentage, formatVolume, parseCandleData } from '../utils/technicalAnalysis';
+import { calculateTrend, formatMarketCap, formatPercentage, formatVolume, parseCandleData, generateHoldingPattern, generateNews, scanForWeeklyOpportunities } from '../utils/technicalAnalysis';
 
 const API_BASE = '/.netlify/functions/growwProxy';
 
@@ -59,6 +59,9 @@ export default function MarketDashboard() {
   const chartRef = useRef(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [historicalPredictions, setHistoricalPredictions] = useState([]);
+  const [holdingPattern, setHoldingPattern] = useState(null);
+  const [news, setNews] = useState([]);
+  const [weeklyOpportunities, setWeeklyOpportunities] = useState([]);
 
   useEffect(() => {
     loadInitialData();
@@ -90,6 +93,7 @@ export default function MarketDashboard() {
       .slice(0, 5);
     setGainers(gainersList);
     setLosers(losersList);
+    setWeeklyOpportunities(scanForWeeklyOpportunities(popularStocks));
   };
 
   const fetchTopMovers = async () => {
@@ -179,6 +183,9 @@ export default function MarketDashboard() {
     
     const trendResult = calculateTrend(mockCandles, 100);
     setTrend(trendResult);
+    
+    setHoldingPattern(generateHoldingPattern());
+    setNews(generateNews());
     
     setLoading(false);
   };
@@ -412,6 +419,31 @@ export default function MarketDashboard() {
                 ))}
               </div>
             </div>
+
+            <div className="bg-groww-card border border-groww-border rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Flame className="w-5 h-5 text-yellow-400" />
+                <h2 className="text-lg font-semibold text-white">Weekly Opportunities</h2>
+              </div>
+              <div className="space-y-2">
+                {weeklyOpportunities.slice(0, 4).map((stock, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => selectStock(stock)}
+                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-groww-border/50 transition-all border border-transparent hover:border-yellow-400/20"
+                  >
+                    <div className="text-left">
+                      <div className="text-white font-medium">{stock.symbol}</div>
+                      <div className="text-gray-400 text-xs">{stock.name}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-yellow-400 text-sm font-medium">{stock.weeklyOutlook}</div>
+                      <div className="text-gray-400 text-xs">{stock.weeklyConfidence}%</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="lg:col-span-2">
@@ -436,7 +468,7 @@ export default function MarketDashboard() {
                 </div>
 
                 <div className="flex gap-2 border-b border-groww-border">
-                  {['overview', 'technical', 'prediction'].map(tab => (
+                  {['overview', 'technical', 'prediction', 'news', 'holdings'].map(tab => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
@@ -550,40 +582,177 @@ export default function MarketDashboard() {
                 )}
 
                 {activeTab === 'prediction' && trend && (
-                  <div className={`rounded-xl p-6 border-2 ${getSignalBg(trend.signal)} ${getSignalBorder(trend.signal)}`}>
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
-                          <Clock className="w-4 h-4" />
-                          1-3 Week Outlook
+                  <div className="space-y-4">
+                    <div className={`rounded-xl p-6 border-2 ${getSignalBg(trend.signal)} ${getSignalBorder(trend.signal)}`}>
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
+                            <Clock className="w-4 h-4" />
+                            1-3 Week Outlook
+                          </div>
+                          <div className={`text-3xl font-bold ${getSignalColor(trend.signal)}`}>
+                            {trend.signal}
+                          </div>
+                          <div className="text-gray-400 text-sm mt-1">
+                            Confidence: {trend.confidence}%
+                          </div>
                         </div>
-                        <div className={`text-3xl font-bold ${getSignalColor(trend.signal)}`}>
-                          {trend.signal}
-                        </div>
-                        <div className="text-gray-400 text-sm mt-1">
-                          Confidence: {trend.confidence}%
+                        <div className="text-right">
+                          <div className="text-gray-400 text-xs">Support</div>
+                          <div className="text-groww-green font-semibold">₹{trend.metrics.support}</div>
+                          <div className="text-gray-400 text-xs mt-2">Resistance</div>
+                          <div className="text-groww-red font-semibold">₹{trend.metrics.resistance}</div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-gray-400 text-xs">Support</div>
-                        <div className="text-groww-green font-semibold">₹{trend.metrics.support}</div>
-                        <div className="text-gray-400 text-xs mt-2">Resistance</div>
-                        <div className="text-groww-red font-semibold">₹{trend.metrics.resistance}</div>
-                      </div>
+                      
+                      {trend.reasons.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-white text-sm font-medium">Analysis Factors:</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {trend.reasons.map((reason, i) => (
+                              <span key={i} className="text-sm bg-groww-dark px-3 py-1.5 rounded-lg text-gray-300">
+                                {reason}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    
-                    {trend.reasons.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="text-white text-sm font-medium">Analysis Factors:</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {trend.reasons.map((reason, i) => (
-                            <span key={i} className="text-sm bg-groww-dark px-3 py-1.5 rounded-lg text-gray-300">
-                              {reason}
-                            </span>
-                          ))}
+
+                    {trend.entryStrategy && (
+                      <div className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
+                        <h4 className="text-white font-medium mb-3">Trading Strategy</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {trend.entryStrategy.buyZone && (
+                            <div className="flex items-center gap-2">
+                              <ArrowUp className="w-4 h-4 text-groww-green" />
+                              <span className="text-sm text-gray-300">{trend.entryStrategy.buyZone}</span>
+                            </div>
+                          )}
+                          {trend.entryStrategy.sellZone && (
+                            <div className="flex items-center gap-2">
+                              <ArrowDown className="w-4 h-4 text-groww-red" />
+                              <span className="text-sm text-gray-300">{trend.entryStrategy.sellZone}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-yellow-400" />
+                            <span className="text-sm text-gray-300">{trend.entryStrategy.stopLoss}</span>
+                          </div>
+                          {trend.entryStrategy.target1 && (
+                            <div className="flex items-center gap-2">
+                              <Target className="w-4 h-4 text-groww-green" />
+                              <span className="text-sm text-gray-300">{trend.entryStrategy.target1}</span>
+                            </div>
+                          )}
+                          {trend.entryStrategy.target2 && (
+                            <div className="flex items-center gap-2">
+                              <Target className="w-4 h-4 text-groww-green" />
+                              <span className="text-sm text-gray-300">{trend.entryStrategy.target2}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
+
+                    {trend.weekly && (
+                      <div className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
+                        <h4 className="text-white font-medium mb-3">Weekly Prediction (1 Week)</h4>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className={`text-lg font-bold ${trend.weekly.outlook.includes('Bullish') ? 'text-groww-green' : trend.weekly.outlook.includes('Bearish') ? 'text-groww-red' : 'text-yellow-400'}`}>
+                              {trend.weekly.outlook}
+                            </span>
+                            <span className="text-gray-400 text-sm ml-2">({trend.weekly.confidence}% confidence)</span>
+                          </div>
+                          <div className="text-gray-400 text-sm">
+                            Weekly Change: <span className={trend.weekly.weeklyChange >= 0 ? 'text-groww-green' : 'text-groww-red'}>
+                              {formatPercentage(trend.weekly.weeklyChange)}
+                            </span>
+                          </div>
+                        </div>
+                        {trend.weekly.reasons.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {trend.weekly.reasons.map((reason, i) => (
+                              <span key={i} className="text-xs bg-groww-card px-2 py-1 rounded text-gray-400">
+                                {reason}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {trend.shortTerm && trend.mediumTerm && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
+                          <h4 className="text-gray-400 text-xs mb-2">Short Term (1-3 Days)</h4>
+                          <div className={`font-semibold ${trend.shortTerm.outlook === 'Upward' ? 'text-groww-green' : trend.shortTerm.outlook === 'Downward' ? 'text-groww-red' : 'text-yellow-400'}`}>
+                            {trend.shortTerm.outlook}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">{trend.shortTerm.reason}</div>
+                        </div>
+                        <div className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
+                          <h4 className="text-gray-400 text-xs mb-2">Medium Term (1-4 Weeks)</h4>
+                          <div className={`font-semibold ${
+                          trend.mediumTerm.outlook === 'Uptrend' ? 'text-groww-green' : 
+                          trend.mediumTerm.outlook === 'Downtrend' ? 'text-groww-red' : 'text-yellow-400'
+                        }`}>
+                            {trend.mediumTerm.outlook}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">{trend.mediumTerm.reason}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'news' && news.length > 0 && (
+                  <div className="space-y-4">
+                    {news.map((item, idx) => (
+                      <div key={idx} className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="text-white font-medium">{item.title}</h4>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            item.sentiment === 'bullish' ? 'bg-groww-green/20 text-groww-green' :
+                            item.sentiment === 'bearish' ? 'bg-groww-red/20 text-groww-red' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {item.sentiment}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span>{item.source}</span>
+                          <span>{item.date}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {activeTab === 'holdings' && holdingPattern && (
+                  <div className="space-y-4">
+                    <h4 className="text-white font-medium">Shareholding Pattern</h4>
+                    {holdingPattern.map((holder, idx) => (
+                      <div key={idx} className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-gray-400" />
+                            <span className="text-white">{holder.category}</span>
+                          </div>
+                          <span className="text-white font-semibold">{holder.percentage.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full bg-groww-border rounded-full h-2">
+                          <div 
+                            className="bg-groww-green rounded-full h-2" 
+                            style={{ width: `${holder.percentage}%` }}
+                          />
+                        </div>
+                        <div className={`text-xs mt-2 ${holder.change >= 0 ? 'text-groww-green' : 'text-groww-red'}`}>
+                          {holder.change >= 0 ? '+' : ''}{holder.change.toFixed(2)}% vs last quarter
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
