@@ -1,141 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { TrendingUp, TrendingDown, Search, Loader2, BarChart3, Activity, Target, Clock, Trending, LineChart, Newspaper, Users, Flame, AlertCircle, ArrowUp, ArrowDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Search, Loader2, BarChart3, Activity, Target, Clock, LineChart, AlertCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import { createChart, CrosshairMode } from 'lightweight-charts';
-import { calculateTrend, formatMarketCap, formatPercentage, formatVolume, parseCandleData, generateHoldingPattern, generateNews, scanForWeeklyOpportunities } from '../utils/technicalAnalysis';
+import { calculateTrend, formatMarketCap, formatPercentage, formatVolume, parseCandleData } from '../utils/technicalAnalysis';
 
 const API_BASE = '/.netlify/functions/growwProxy';
-
-const popularStocks = [
-  { symbol: 'RELIANCE', name: 'Reliance Industries', price: 2856.45, change: 4.32 },
-  { symbol: 'TCS', name: 'Tata Consultancy Services', price: 3856.20, change: 3.18 },
-  { symbol: 'HDFCBANK', name: 'HDFC Bank', price: 1685.30, change: 2.87 },
-  { symbol: 'INFY', name: 'Infosys', price: 1456.75, change: 2.54 },
-  { symbol: 'NIFTY 50', name: 'Nifty 50', price: 22567.80, change: 1.25 },
-  { symbol: 'SENSEX', name: 'BSE Sensex', price: 74850.25, change: 1.18 },
-  { symbol: 'ITC', name: 'ITC Ltd', price: 425.60, change: 2.12 },
-  { symbol: 'SBIN', name: 'State Bank of India', price: 765.80, change: -1.34 },
-  { symbol: 'HCLTECH', name: 'HCL Technologies', price: 1256.40, change: 1.85 },
-  { symbol: 'WIPRO', name: 'Wipro Ltd', price: 425.30, change: -1.56 },
-  { symbol: 'ICICIBANK', name: 'ICICI Bank', price: 985.60, change: 0.95 },
-  { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 1785.90, change: 1.42 },
-  { symbol: 'ADANIPORTS', name: 'Adani Ports', price: 1256.30, change: -2.15 },
-  { symbol: 'LT', name: 'Larsen & Toubro', price: 3256.80, change: 1.78 },
-  { symbol: 'BHARTIARTL', name: 'Bharti Airtel', price: 1456.20, change: 2.34 },
-  { symbol: 'ASIANPAINT', name: 'Asian Paints', price: 2856.40, change: -0.85 },
-  { symbol: 'TITAN', name: 'Titan Company', price: 3125.60, change: -1.89 },
-  { symbol: 'BAJFINANCE', name: 'Bajaj Finance', price: 6895.20, change: -2.98 },
-  { symbol: 'MARUTI', name: 'Maruti Suzuki', price: 12560.30, change: 1.65 },
-  { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical', price: 1585.60, change: 0.75 },
-  { symbol: 'TATASTEEL', name: 'Tata Steel', price: 165.80, change: -1.25 },
-  { symbol: 'JSWSTEEL', name: 'JSW Steel', price: 895.40, change: -0.95 },
-  { symbol: 'HINDUNILVR', name: 'Hindustan Unilever', price: 2685.30, change: 0.45 },
-  { symbol: 'DIVISLAB', name: 'Divis Laboratories', price: 4256.80, change: 2.15 },
-  { symbol: 'ULTRACEMCO', name: 'UltraTech Cement', price: 9856.40, change: -1.35 },
-  { symbol: 'NTPC', name: 'NTPC Ltd', price: 385.60, change: 0.85 },
-  { symbol: 'POWERGRID', name: 'Power Grid Corp', price: 285.40, change: 0.65 },
-  { symbol: 'ONGC', name: 'Oil & Natural Gas', price: 285.60, change: -2.15 },
-  { symbol: 'COALINDIA', name: 'Coal India', price: 485.30, change: -1.45 },
-  { symbol: 'VEDL', name: 'Vedanta Ltd', price: 425.80, change: -3.25 },
-  { symbol: 'ADANI', name: 'Adani Enterprises', price: 1285.40, change: -3.45 },
-  { symbol: 'AXISBANK', name: 'Axis Bank', price: 985.60, change: 1.25 },
-  { symbol: 'INDUSINDBK', name: 'IndusInd Bank', price: 1485.30, change: 0.95 },
-  { symbol: 'BANKBARODA', name: 'Bank of Baroda', price: 285.60, change: -0.75 },
-  { symbol: 'PNB', name: 'Punjab National Bank', price: 125.40, change: -1.85 },
-  { symbol: 'CANBK', name: 'Canara Bank', price: 485.60, change: -0.65 },
-  { symbol: 'BHEL', name: 'Bharat Heavy Electricals', price: 285.40, change: -2.45 },
-  { symbol: 'TATAMOTORS', name: 'Tata Motors', price: 785.60, change: 3.25 },
-  { symbol: 'EICHERMOT', name: 'Eicher Motors', price: 4256.80, change: 1.85 },
-  { symbol: 'HEROMOTOCO', name: 'Hero MotoCorp', price: 3285.40, change: -0.95 },
-  { symbol: 'BAJAJ-AUTO', name: 'Bajaj Auto', price: 9856.20, change: 0.75 },
-  { symbol: 'TVSMOTOR', name: 'TVS Motor', price: 2285.60, change: 2.15 },
-  { symbol: 'M&M', name: 'Mahindra & Mahindra', price: 2856.40, change: 1.45 },
-  { symbol: 'GRASIM', name: 'Grasim Industries', price: 2856.80, change: 0.85 },
-  { symbol: 'SHREECEM', name: 'Shree Cement', price: 22856.40, change: -1.25 },
-  { symbol: 'AMBUJACEM', name: 'Ambuja Cements', price: 585.60, change: -0.95 },
-  { symbol: 'ACC', name: 'ACC Ltd', price: 2285.40, change: -0.75 },
-  { symbol: 'ULTRACEMCO', name: 'UltraTech Cement', price: 9856.40, change: -1.35 },
-  { symbol: 'ADANIENSOL', name: 'Adani Energy Solutions', price: 1256.80, change: -2.85 },
-  { symbol: 'ADANIGREEN', name: 'Adani Green Energy', price: 1485.60, change: -4.15 },
-  { symbol: 'ADANITOTAL', name: 'Adani Total Gas', price: 856.40, change: -3.25 },
-  { symbol: 'GAIL', name: 'GAIL India', price: 185.60, change: -1.15 },
-  { symbol: 'BPCL', name: 'Bharat Petroleum', price: 385.40, change: -2.25 },
-  { symbol: 'IOC', name: 'Indian Oil Corp', price: 145.80, change: -1.85 },
-  { symbol: 'HINDPETRO', name: 'Hindustan Petroleum', price: 385.60, change: -2.45 },
-  { symbol: 'CIPLA', name: 'Cipla Ltd', price: 1285.40, change: 0.65 },
-  { symbol: 'DRREDDY', name: 'Dr Reddy Labs', price: 5856.80, change: 1.25 },
-  { symbol: 'ZYDUSLIFE', name: 'Zydus Lifesciences', price: 985.60, change: 0.45 },
-  { symbol: 'APOLLOHOSP', name: 'Apollo Hospitals', price: 6285.40, change: 1.85 },
-  { symbol: 'MAXHEALTH', name: 'Max Healthcare', price: 985.60, change: 2.15 },
-  { symbol: 'METROPOLIS', name: 'Metropolis Healthcare', price: 1585.40, change: 0.75 },
-  { symbol: 'LUPIN', name: 'Lupin Ltd', price: 1685.60, change: -0.85 },
-  { symbol: 'AUROPHARMA', name: 'Aurobindo Pharma', price: 985.40, change: -1.15 },
-  { symbol: 'GLENMARK', name: 'Glenmark Pharma', price: 885.60, change: -0.95 },
-  { symbol: 'CADILAHC', name: 'Cadila Healthcare', price: 585.80, change: -1.25 },
-  { symbol: 'TORNTPHARM', name: 'Torrent Pharma', price: 2285.40, change: 0.85 },
-  { symbol: 'SBILIFE', name: 'SBI Life Insurance', price: 1485.60, change: 1.45 },
-  { symbol: 'ICICIGI', name: 'ICICI Lombard', price: 1685.40, change: 1.25 },
-  { symbol: 'BAJAJINS', name: 'Bajaj Insurance', price: 1585.60, change: 0.95 },
-  { symbol: 'HDFCLIFE', name: 'HDFC Life Insurance', price: 685.40, change: 0.75 },
-  { symbol: 'MUTHOOTFIN', name: 'Muthoot Finance', price: 1585.80, change: 1.85 },
-  { symbol: 'CHOLAFIN', name: 'Cholamandalam Inv', price: 1285.60, change: 1.15 },
-  { symbol: 'BAJJFINSV', name: 'Bajaj Finserv', price: 15856.40, change: -1.95 },
-  { symbol: 'SHRIRAMFIN', name: 'Shriram Finance', price: 2285.60, change: 1.25 },
-  { symbol: 'PGHH', name: 'Procter & Gamble', price: 15856.80, change: 0.45 },
-  { symbol: 'COLPAL', name: 'Colgate Palmolive', price: 2856.40, change: 0.35 },
-  { symbol: 'DABUR', name: 'Dabur India', price: 585.60, change: 0.55 },
-  { symbol: 'MARICO', name: 'Marico Ltd', price: 625.40, change: 0.85 },
-  { symbol: 'GODREJCP', name: 'Godrej Consumer', price: 1285.60, change: 0.75 },
-  { symbol: 'TATACONSUM', name: 'Tata Consumer', price: 985.40, change: 1.15 },
-  { symbol: 'BRITANNIA', name: 'Britannia Industries', price: 4285.60, change: 0.45 },
-  { symbol: 'NESTLEIND', name: 'Nestle India', price: 22856.40, change: 0.25 },
-  { symbol: 'RADICO', name: 'Radico Khaitan', price: 1585.80, change: 2.15 },
-  { symbol: 'UBL', name: 'United Breweries', price: 4285.60, change: 1.25 },
-  { symbol: 'ABFRL', name: 'Aditya Birla Fashion', price: 285.40, change: -2.15 },
-  { symbol: 'DMART', name: 'Avenue Supermarts', price: 4585.60, change: 1.85 },
-  { symbol: 'NYKAA', name: 'FSN E-Commerce', price: 185.60, change: -3.45 },
-  { symbol: 'JUBLFOOD', name: 'Jubilant Foodworks', price: 585.40, change: -1.25 },
-  { symbol: 'ZOMATO', name: 'Zomato Ltd', price: 185.80, change: -2.85 },
-  { symbol: 'SWIGGY', name: 'Swiggy Ltd', price: 425.60, change: -4.15 },
-  { symbol: 'PAYTM', name: 'One97 Communications', price: 485.40, change: -3.25 },
-  { symbol: 'IRCTC', name: 'IRCTC Ltd', price: 985.60, change: 1.45 },
-  { symbol: 'RELIANCE', name: 'Reliance Industries', price: 2856.45, change: 4.32 },
-  { symbol: 'HFCL', name: 'HFCL Ltd', price: 125.60, change: 2.15 },
-  { symbol: 'VODAFONE', name: 'Vodafone Idea', price: 12.50, change: -5.25 },
-  { symbol: 'TATAELXSI', name: 'Tata Elxsi', price: 6856.40, change: 2.85 },
-  { symbol: 'TCS', name: 'Tata Consultancy Services', price: 3856.20, change: 3.18 },
-  { symbol: 'TECHM', name: 'Tech Mahindra', price: 1285.60, change: 1.45 },
-  { symbol: 'MPHASIS', name: 'Mphasis Ltd', price: 2285.40, change: 1.95 },
-  { symbol: 'PERSISTENT', name: 'Persistent Systems', price: 1585.80, change: 2.65 },
-  { symbol: 'COFORGE', name: 'Coforge Ltd', price: 5285.60, change: 3.15 },
-  { symbol: 'LTIM', name: 'LTI Mindtree', price: 5285.40, change: 2.85 }
-];
-
-const generateMockCandles = (basePrice = 2800, days = 365) => {
-  const candles = [];
-  let price = basePrice;
-  const startTime = Math.floor(Date.now() / 1000) - (days * 86400);
-  
-  for (let i = 0; i < days; i++) {
-    const volatility = 0.02 + Math.random() * 0.03;
-    const change = (Math.random() - 0.48) * volatility * price;
-    const open = price;
-    const close = price + change;
-    const high = Math.max(open, close) + Math.random() * volatility * price * 0.5;
-    const low = Math.min(open, close) - Math.random() * volatility * price * 0.5;
-    
-    candles.push({
-      time: startTime + (i * 86400),
-      open: parseFloat(open.toFixed(2)),
-      high: parseFloat(high.toFixed(2)),
-      low: parseFloat(low.toFixed(2)),
-      close: parseFloat(close.toFixed(2)),
-      volume: Math.floor(Math.random() * 50000000) + 10000000
-    });
-    
-    price = close;
-  }
-  return candles;
-};
 
 export default function MarketDashboard() {
   const [gainers, setGainers] = useState([]);
@@ -148,14 +16,9 @@ export default function MarketDashboard() {
   const [trend, setTrend] = useState(null);
   const [loading, setLoading] = useState(false);
   const [chartTimeframe, setChartTimeframe] = useState('1M');
-  const [showPredictionModal, setShowPredictionModal] = useState(false);
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
   const [activeTab, setActiveTab] = useState('overview');
-  const [historicalPredictions, setHistoricalPredictions] = useState([]);
-  const [holdingPattern, setHoldingPattern] = useState(null);
-  const [news, setNews] = useState([]);
-  const [weeklyOpportunities, setWeeklyOpportunities] = useState([]);
   const [marketStatus, setMarketStatus] = useState({ isOpen: false, status: 'Closed', nextOpen: '' });
 
   const checkMarketStatus = () => {
@@ -237,25 +100,12 @@ export default function MarketDashboard() {
         if (data?.gainers?.length > 0 && data?.losers?.length > 0) {
           setGainers(data.gainers.slice(0, 5));
           setLosers(data.losers.slice(0, 5));
-          setWeeklyOpportunities(scanForWeeklyOpportunities(data.gainers));
           return;
         }
       }
     } catch (e) {
-      console.log('Using mock data');
+      console.log('API Error:', e.message);
     }
-    
-    const gainersList = popularStocks
-      .filter(s => s.change > 0)
-      .sort((a, b) => b.change - a.change)
-      .slice(0, 5);
-    const losersList = popularStocks
-      .filter(s => s.change <= 0)
-      .sort((a, b) => a.change - b.change)
-      .slice(0, 5);
-    setGainers(gainersList);
-    setLosers(losersList);
-    setWeeklyOpportunities(scanForWeeklyOpportunities(popularStocks));
   };
 
   const fetchTopMovers = async () => {
@@ -268,7 +118,7 @@ export default function MarketDashboard() {
         if (data?.losers) setLosers(data.losers);
       }
     } catch (e) {
-      console.log('Using mock data');
+      console.log('API Error:', e.message);
     }
     setLoading(false);
   };
@@ -281,7 +131,7 @@ export default function MarketDashboard() {
         return quoteData;
       }
     } catch (e) {
-      console.log('Using mock quote data');
+      console.log('API Error:', e.message);
     }
     return null;
   };
@@ -300,7 +150,7 @@ export default function MarketDashboard() {
         }
       }
     } catch (e) {
-      console.log('Using mock candle data');
+      console.log('API Error:', e.message);
     }
     return null;
   };
@@ -310,17 +160,25 @@ export default function MarketDashboard() {
     performSearch();
   };
 
-  const performSearch = () => {
+  const performSearch = async () => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
       return;
     }
     
-    const filtered = popularStocks.filter(s => 
-      s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setSearchResults(filtered);
+    try {
+      const response = await fetch(`${API_BASE}?action=search&q=${encodeURIComponent(searchQuery)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setSearchResults(data.slice(0, 10));
+          return;
+        }
+      }
+    } catch (e) {
+      console.log('Search API Error:', e.message);
+    }
+    setSearchResults([]);
   };
 
   const handleSearchInput = (e) => {
@@ -350,79 +208,62 @@ export default function MarketDashboard() {
     setSearchQuery('');
     setSearchResults([]);
     setLoading(true);
+    setStockDetails(null);
+    setCandleData([]);
+    setTrend(null);
     
     try {
       const quoteResponse = await fetch(`${API_BASE}?action=quote&symbol=${stock.symbol}`);
-      let realData = null;
-      if (quoteResponse.ok) {
-        realData = await quoteResponse.json();
+      if (!quoteResponse.ok) {
+        throw new Error('Quote fetch failed');
       }
       
+      const realData = await quoteResponse.json();
       let stockQuote = realData?.[`NSE_${stock.symbol}`] || realData;
       
-      if (stockQuote) {
-        setStockDetails({
-          high52: stockQuote.week_52_high || stock.price * 1.2,
-          low52: stockQuote.week_52_low || stock.price * 0.75,
-          marketCap: stockQuote.market_cap || Math.floor(Math.random() * 15e12) + 1e12,
-          pe: stockQuote.pe || 15 + Math.random() * 30,
-          sector: 'Equity',
-          volume: stockQuote.volume || Math.floor(Math.random() * 50000000),
-          avgVolume: stockQuote.volume || Math.floor(Math.random() * 30000000),
-          dayHigh: stockQuote.ohlc?.high || stock.price * 1.02,
-          dayLow: stockQuote.ohlc?.low || stock.price * 0.98,
-          open: stockQuote.ohlc?.open || stock.price * 0.99,
-          prevClose: stockQuote.ohlc?.close || stock.price,
-          lastPrice: stockQuote.last_price,
-          dayChange: stockQuote.day_change,
-          dayChangePerc: stockQuote.day_change_perc
-        });
-        
-        const candleResponse = await fetch(
-          `${API_BASE}?action=candle&symbol=${stock.symbol}&interval=1D`
-        );
-        if (candleResponse.ok) {
-          const candleJson = await candleResponse.json();
-          if (candleJson?.candles) {
-            setCandleData(parseCandleData(candleJson.candles));
-            const trendResult = calculateTrend(parseCandleData(candleJson.candles), 100);
-            setTrend(trendResult);
-            setHoldingPattern(generateHoldingPattern());
-            setNews(generateNews());
-            setLoading(false);
-            return;
-          }
+      if (!stockQuote || !stockQuote.last_price) {
+        throw new Error('Invalid quote data');
+      }
+      
+      setStockDetails({
+        high52: stockQuote.week_52_high,
+        low52: stockQuote.week_52_low,
+        marketCap: stockQuote.market_cap,
+        pe: stockQuote.pe,
+        sector: 'Equity',
+        volume: stockQuote.volume,
+        avgVolume: stockQuote.volume,
+        dayHigh: stockQuote.ohlc?.high,
+        dayLow: stockQuote.ohlc?.low,
+        open: stockQuote.ohlc?.open,
+        prevClose: stockQuote.ohlc?.close,
+        lastPrice: stockQuote.last_price,
+        dayChange: stockQuote.day_change,
+        dayChangePerc: stockQuote.day_change_perc
+      });
+      
+      const candleResponse = await fetch(
+        `${API_BASE}?action=candle&symbol=${stock.symbol}&interval=1D`
+      );
+      
+      if (candleResponse.ok) {
+        const candleJson = await candleResponse.json();
+        if (candleJson?.candles && candleJson.candles.length > 0) {
+          const candles = parseCandleData(candleJson.candles);
+          setCandleData(candles);
+          const trendResult = calculateTrend(candles, 100);
+          setTrend(trendResult);
+          setLoading(false);
+          return;
         }
       }
+      
+      throw new Error('No candle data available');
+      
     } catch (e) {
-      console.log('API not available, using mock data');
+      console.log('API Error:', e.message);
+      setLoading(false);
     }
-    
-    const mockDetails = {
-      high52: stock.price * 1.2,
-      low52: stock.price * 0.75,
-      marketCap: Math.floor(Math.random() * 15e12) + 1e12,
-      pe: 15 + Math.random() * 30,
-      sector: 'Equity',
-      volume: Math.floor(Math.random() * 50000000),
-      avgVolume: Math.floor(Math.random() * 30000000),
-      dayHigh: stock.price * 1.02,
-      dayLow: stock.price * 0.98,
-      open: stock.price * 0.99,
-      prevClose: stock.price * (1 - stock.change / 100)
-    };
-    setStockDetails(mockDetails);
-
-    const mockCandles = generateMockCandles(stock.price, 365);
-    setCandleData(mockCandles);
-    
-    const trendResult = calculateTrend(mockCandles, 100);
-    setTrend(trendResult);
-    
-    setHoldingPattern(generateHoldingPattern());
-    setNews(generateNews());
-    
-    setLoading(false);
   };
 
   const getTimeframeDays = (tf) => {
@@ -669,31 +510,6 @@ export default function MarketDashboard() {
                 ))}
               </div>
             </div>
-
-            <div className="bg-groww-card border border-groww-border rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Flame className="w-5 h-5 text-yellow-400" />
-                <h2 className="text-lg font-semibold text-white">Weekly Opportunities</h2>
-              </div>
-              <div className="space-y-2">
-                {weeklyOpportunities.slice(0, 4).map((stock, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => selectStock(stock)}
-                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-groww-border/50 transition-all border border-transparent hover:border-yellow-400/20"
-                  >
-                    <div className="text-left">
-                      <div className="text-white font-medium">{stock.symbol}</div>
-                      <div className="text-gray-400 text-xs">{stock.name}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-yellow-400 text-sm font-medium">{stock.weeklyOutlook}</div>
-                      <div className="text-gray-400 text-xs">{stock.weeklyConfidence}%</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           <div className="lg:col-span-2">
@@ -718,7 +534,7 @@ export default function MarketDashboard() {
                 </div>
 
                 <div className="flex gap-2 border-b border-groww-border">
-                  {['overview', 'technical', 'prediction', 'news', 'holdings'].map(tab => (
+                  {['overview', 'technical', 'prediction'].map(tab => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
@@ -954,55 +770,6 @@ export default function MarketDashboard() {
                         </div>
                       </div>
                     )}
-                  </div>
-                )}
-
-                {activeTab === 'news' && news.length > 0 && (
-                  <div className="space-y-4">
-                    {news.map((item, idx) => (
-                      <div key={idx} className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="text-white font-medium">{item.title}</h4>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            item.sentiment === 'bullish' ? 'bg-groww-green/20 text-groww-green' :
-                            item.sentiment === 'bearish' ? 'bg-groww-red/20 text-groww-red' :
-                            'bg-gray-500/20 text-gray-400'
-                          }`}>
-                            {item.sentiment}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-500">
-                          <span>{item.source}</span>
-                          <span>{item.date}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {activeTab === 'holdings' && holdingPattern && (
-                  <div className="space-y-4">
-                    <h4 className="text-white font-medium">Shareholding Pattern</h4>
-                    {holdingPattern.map((holder, idx) => (
-                      <div key={idx} className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4 text-gray-400" />
-                            <span className="text-white">{holder.category}</span>
-                          </div>
-                          <span className="text-white font-semibold">{holder.percentage.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full bg-groww-border rounded-full h-2">
-                          <div 
-                            className="bg-groww-green rounded-full h-2" 
-                            style={{ width: `${holder.percentage}%` }}
-                          />
-                        </div>
-                        <div className={`text-xs mt-2 ${holder.change >= 0 ? 'text-groww-green' : 'text-groww-red'}`}>
-                          {holder.change >= 0 ? '+' : ''}{holder.change.toFixed(2)}% vs last quarter
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 )}
 
