@@ -62,18 +62,22 @@ async function getAccessToken() {
   let accessToken;
 
   if (TOTP_TOKEN && TOTP_SECRET) {
-    const TOTP = require('totp-generator');
-    const totp = TOTP(TOTP_SECRET);
-    
-    const response = await fetch(`${GROWW_API_BASE}/auth/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: TOTP_TOKEN, totp })
-    });
-    
-    if (!response.ok) throw new Error('TOTP authentication failed');
-    const data = await response.json();
-    accessToken = data.access_token;
+    try {
+      const TOTP = require('totp-generator');
+      const totp = TOTP(TOTP_SECRET);
+      
+      const response = await fetch(`${GROWW_API_BASE}/auth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: TOTP_TOKEN, totp })
+      });
+      
+      if (!response.ok) throw new Error('TOTP authentication failed');
+      const data = await response.json();
+      accessToken = data.access_token;
+    } catch (e) {
+      console.log('TOTP not available, using API key flow');
+    }
   } else if (SECRET) {
     const response = await fetch(`${GROWW_API_BASE}/auth/token`, {
       method: 'POST',
