@@ -162,55 +162,50 @@ exports.handler = async (event) => {
         responseData = searchResults;
         break;
 
-      case 'topMovers':
-        const cachedMovers = getCache('topMovers');
-        if (cachedMovers) {
-          return { statusCode: 200, headers, body: JSON.stringify(cachedMovers) };
-        }
+      case 'topMovers': {
+        const popularSymbols = [
+          'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'SBIN', 'ITC', 'LT', 'HINDUNILVR',
+          'ICICIBANK', 'BAJFINANCE', 'KOTAKBANK', 'AXISBANK', 'WIPRO', 'ADANIPORTS',
+          'ASIANPAINT', 'MARUTI', 'TITAN', 'ULTRACEMCO', 'SUNPHARMA', 'ONGC'
+        ];
         
-        if (!cache.instruments.data) {
-          const instrumentsResponse = await growwFetch(apiKey, '/instruments');
-          cache.instruments = { data: instrumentsResponse, timestamp: Date.now() };
-        }
-        
-        const instrumentsList = cache.instruments.data.filter(i => i.segment === 'CASH' && i.exchange === 'NSE');
-        const symbolsToFetch = instrumentsList.slice(0, 100).map(i => `NSE:${i.trading_symbol}`);
-        
-        const quotesResponse = await growwFetch(apiKey, '/live-data/ltp', {
+        const ltpResponse = await growwFetch(apiKey, '/live-data/ltp', {
           segment: 'CASH',
-          exchange_symbols: symbolsToFetch.join(',')
+          exchange_symbols: 'NSE:' + popularSymbols.join(',NSE:')
         });
         
-        const quotesArray = Object.entries(quotesResponse).map(([key, value]) => ({
+        const quotesArray = Object.entries(ltpResponse).map(([key, value]) => ({
           symbol: key.replace('NSE:', ''),
           ...value
-        }));
+        })).filter(q => q.last_price > 0);
         
         const sortedByChange = quotesArray.sort((a, b) => (b.day_change_perc || 0) - (a.day_change_perc || 0));
         
-        const topMovers = {
+        responseData = {
           gainers: sortedByChange.slice(0, 10).map(q => ({
             symbol: q.symbol,
-            name: instrumentsList.find(i => i.trading_symbol === q.symbol)?.name || q.symbol,
+            name: q.symbol,
             price: q.last_price,
             change: q.day_change_perc,
-            volume: q.volume,
-            high: q.ohlc?.high,
-            low: q.ohlc?.low
+            volume: q.volume
           })),
           losers: sortedByChange.slice(-10).reverse().map(q => ({
             symbol: q.symbol,
-            name: instrumentsList.find(i => i.trading_symbol === q.symbol)?.name || q.symbol,
+            name: q.symbol,
             price: q.last_price,
             change: q.day_change_perc,
-            volume: q.volume,
-            high: q.ohlc?.high,
-            low: q.ohlc?.low
+            volume: q.volume
           }))
         };
-        
-        setCache('topMovers', topMovers);
-        responseData = topMovers;
+        break;
+      }
+
+      case 'test':
+        responseData = { 
+          status: 'ok', 
+          envConfigured: !!process.env.GROWW_API_KEY,
+          envKeyPrefix: process.env.GROWW_API_KEY ? process.env.GROWW_API_KEY.substring(0, 8) + '...' : 'NOT_SET'
+        };
         break;
 
       default:
@@ -219,7 +214,7 @@ exports.handler = async (event) => {
           headers, 
           body: JSON.stringify({ 
             error: 'Invalid action',
-            available: ['quote', 'ltp', 'candle', 'search', 'topMovers']
+            available: ['quote', 'ltp', 'candle', 'search', 'topMovers', 'test']
           }) 
         };
     }
@@ -227,11 +222,15 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: JSON.stringify(responseData) };
 
   } catch (error) {
-    console.error('Groww Proxy Error:', error);
+    console.error('Groww Proxy Error:', error.message, error.stack);
     return { 
       statusCode: 500, 
       headers, 
-      body: JSON.stringify({ error: error.message }) 
+      body: JSON.stringify({ 
+        error: error.message,
+        envConfigured: !!process.env.GROWW_API_KEY,
+        envKeyPrefix: process.env.GROWW_API_KEY ? process.env.GROWW_API_KEY.substring(0, 8) + '...' : 'NOT_SET'
+      }) 
     };
   }
 };
