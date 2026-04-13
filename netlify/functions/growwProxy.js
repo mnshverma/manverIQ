@@ -5,6 +5,8 @@ const GROWW_API_SECRET = process.env.GROWW_API_SECRET;
 let accessToken = null;  // Add semicolon - null was being parsed as string
 let tokenExpiry = 0;
 
+const crypto = require('crypto');
+
 async function getAccessToken() {
   if (accessToken && accessToken.length > 20 && Date.now() < tokenExpiry) {
     console.log('Using cached token');
@@ -12,9 +14,10 @@ async function getAccessToken() {
   }
   
   const timestamp = Math.floor(Date.now() / 1000).toString();
+  const checksum = crypto.createHash('md5').update(GROWW_API_SECRET + timestamp).digest('hex');
+  
   console.log('Generating token, timestamp:', timestamp);
-  console.log('API key prefix:', GROWW_API_KEY?.substring(0, 8));
-  console.log('Secret exists:', !!GROWW_API_SECRET);
+  console.log('Checksum (md5):', checksum);
   
   const response = await fetch(`${GROWW_API_BASE}/token/api/access`, {
     method: 'POST',
@@ -24,14 +27,14 @@ async function getAccessToken() {
     },
     body: JSON.stringify({
       key_type: 'approval',
-      checksum: GROWW_API_SECRET + timestamp,
+      checksum: checksum,
       timestamp: timestamp
     })
   });
   
   const responseText = await response.text();
   console.log('Token response status:', response.status);
-  console.log('Token response body:', responseText.substring(0, 500));
+  console.log('Token response body:', responseText.substring(0, 300));
   
   if (!response.ok) {
     throw new Error(`Token generation failed: ${response.status} - ${responseText}`);
