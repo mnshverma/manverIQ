@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown, Search, Loader2, BarChart3, Activity, Target,
 import { createChart, CrosshairMode } from 'lightweight-charts';
 import { calculateTrend, formatMarketCap, formatPercentage, formatVolume, parseCandleData } from '../utils/technicalAnalysis';
 
-const API_BASE = '/api/stockProxy';
+const API_BASE = '/.netlify/functions/stockProxy';
 
 export default function MarketDashboard() {
   const [gainers, setGainers] = useState([]);
