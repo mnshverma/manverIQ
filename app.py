@@ -63,39 +63,15 @@ def get_stock_data(symbol):
         if obj.get('symbol', '').upper() == symbol.upper():
             return obj
     
-    # Return mock data for demo
-    return {
-        'symbol': symbol.upper(),
-        'companyName': f'{symbol} Ltd',
-        'lastPrice': 150.00 + (hash(symbol) % 500),
-        'pctChange': (hash(symbol) % 10) - 5,
-        'open': 145.00 + (hash(symbol) % 500),
-        'dayHigh': 160.00 + (hash(symbol) % 500),
-        'dayLow': 140.00 + (hash(symbol) % 500),
-        'previousClose': 148.00 + (hash(symbol) % 500)
-    }
+    return None
 
 def get_top_movers():
     """Get top gainers/losers"""
     data = fetch_nse_data()
     
+    # If no data, show error - no mock data
     if not data:
-        # Return demo data
-        demo_gainers = [
-            {'symbol': 'RELIANCE', 'companyName': 'Reliance Industries', 'lastPrice': 2920.50, 'pctChange': 2.45},
-            {'symbol': 'TCS', 'companyName': 'Tata Consultancy', 'lastPrice': 4125.30, 'pctChange': 1.85},
-            {'symbol': 'HDFCBANK', 'companyName': 'HDFC Bank', 'lastPrice': 1680.20, 'pctChange': 1.52},
-            {'symbol': 'INFY', 'companyName': 'Infosys', 'lastPrice': 1890.45, 'pctChange': 1.25},
-            {'symbol': 'SBIN', 'companyName': 'State Bank', 'lastPrice': 725.80, 'pctChange': 1.10}
-        ]
-        demo_losers = [
-            {'symbol': 'NTPC', 'companyName': 'NTPC Ltd', 'lastPrice': 325.60, 'pctChange': -2.15},
-            {'symbol': 'ONGC', 'companyName': 'ONGC', 'lastPrice': 285.40, 'pctChange': -1.85},
-            {'symbol': 'COALINDIA', 'companyName': 'Coal India', 'lastPrice': 485.20, 'pctChange': -1.45},
-            {'symbol': 'BEL', 'companyName': 'Bharat Electronics', 'lastPrice': 285.60, 'pctChange': -1.20},
-            {'symbol': 'ADANIENSOL', 'companyName': 'Adani Enterprises', 'lastPrice': 3285.40, 'pctChange': -0.95}
-        ]
-        return demo_gainers, demo_losers
+        return [], []
     
     # Process real data
     data.sort(key=lambda x: x.get('pctChange', 0), reverse=True)
@@ -124,9 +100,7 @@ def get_nifty():
     for obj in data:
         if obj.get('symbol', '') == 'NIFTY 50':
             return obj
-    
-    # Mock data for demo
-    return {'lastPrice': 22580.50, 'pctChange': 0.45}
+    return None
 
 def get_quote(sym):
     """Get stock quote"""
