@@ -229,7 +229,22 @@ export default function MarketDashboard() {
     };
   }, []);
 
-  const loadInitialData = () => {
+  const loadInitialData = async () => {
+    try {
+      const response = await fetch(`${API_BASE}?action=topMovers`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.gainers?.length > 0 && data?.losers?.length > 0) {
+          setGainers(data.gainers.slice(0, 5));
+          setLosers(data.losers.slice(0, 5));
+          setWeeklyOpportunities(scanForWeeklyOpportunities(data.gainers));
+          return;
+        }
+      }
+    } catch (e) {
+      console.log('Using mock data');
+    }
+    
     const gainersList = popularStocks
       .filter(s => s.change > 0)
       .sort((a, b) => b.change - a.change)
@@ -335,6 +350,53 @@ export default function MarketDashboard() {
     setSearchQuery('');
     setSearchResults([]);
     setLoading(true);
+    
+    try {
+      const quoteResponse = await fetch(`${API_BASE}?action=quote&symbol=${stock.symbol}`);
+      let realData = null;
+      if (quoteResponse.ok) {
+        realData = await quoteResponse.json();
+      }
+      
+      let stockQuote = realData?.[`NSE_${stock.symbol}`] || realData;
+      
+      if (stockQuote) {
+        setStockDetails({
+          high52: stockQuote.week_52_high || stock.price * 1.2,
+          low52: stockQuote.week_52_low || stock.price * 0.75,
+          marketCap: stockQuote.market_cap || Math.floor(Math.random() * 15e12) + 1e12,
+          pe: stockQuote.pe || 15 + Math.random() * 30,
+          sector: 'Equity',
+          volume: stockQuote.volume || Math.floor(Math.random() * 50000000),
+          avgVolume: stockQuote.volume || Math.floor(Math.random() * 30000000),
+          dayHigh: stockQuote.ohlc?.high || stock.price * 1.02,
+          dayLow: stockQuote.ohlc?.low || stock.price * 0.98,
+          open: stockQuote.ohlc?.open || stock.price * 0.99,
+          prevClose: stockQuote.ohlc?.close || stock.price,
+          lastPrice: stockQuote.last_price,
+          dayChange: stockQuote.day_change,
+          dayChangePerc: stockQuote.day_change_perc
+        });
+        
+        const candleResponse = await fetch(
+          `${API_BASE}?action=candle&symbol=${stock.symbol}&interval=1D`
+        );
+        if (candleResponse.ok) {
+          const candleJson = await candleResponse.json();
+          if (candleJson?.candles) {
+            setCandleData(parseCandleData(candleJson.candles));
+            const trendResult = calculateTrend(parseCandleData(candleJson.candles), 100);
+            setTrend(trendResult);
+            setHoldingPattern(generateHoldingPattern());
+            setNews(generateNews());
+            setLoading(false);
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.log('API not available, using mock data');
+    }
     
     const mockDetails = {
       high52: stock.price * 1.2,
@@ -545,9 +607,9 @@ export default function MarketDashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-white">₹{stock.price?.toFixed(2)}</span>
-                    <span className={`ml-2 text-sm ${stock.change >= 0 ? 'text-groww-green' : 'text-groww-red'}`}>
-                      {formatPercentage(stock.change)}
+                    <span className="text-white">₹{(stock.price || stock.last_price)?.toFixed(2)}</span>
+                    <span className={`ml-2 text-sm ${(stock.change || stock.day_change_perc) >= 0 ? 'text-groww-green' : 'text-groww-red'}`}>
+                      {formatPercentage(stock.change || stock.day_change_perc)}
                     </span>
                   </div>
                 </button>
@@ -575,8 +637,8 @@ export default function MarketDashboard() {
                       <div className="text-gray-400 text-xs">{stock.name}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-white font-medium">₹{stock.price?.toFixed(2)}</div>
-                      <div className="text-groww-green text-sm font-medium">{formatPercentage(stock.change)}</div>
+                      <div className="text-white font-medium">₹{(stock.price || stock.last_price)?.toFixed(2)}</div>
+                      <div className="text-groww-green text-sm font-medium">{formatPercentage(stock.change || stock.day_change_perc)}</div>
                     </div>
                   </button>
                 ))}
@@ -600,8 +662,8 @@ export default function MarketDashboard() {
                       <div className="text-gray-400 text-xs">{stock.name}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-white font-medium">₹{stock.price?.toFixed(2)}</div>
-                      <div className="text-groww-red text-sm font-medium">{formatPercentage(stock.change)}</div>
+                      <div className="text-white font-medium">₹{(stock.price || stock.last_price)?.toFixed(2)}</div>
+                      <div className="text-groww-red text-sm font-medium">{formatPercentage(stock.change || stock.day_change_perc)}</div>
                     </div>
                   </button>
                 ))}
@@ -648,9 +710,9 @@ export default function MarketDashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white">₹{selectedStock.price?.toFixed(2)}</div>
-                    <div className={`text-lg font-medium ${selectedStock.change >= 0 ? 'text-groww-green' : 'text-groww-red'}`}>
-                      {formatPercentage(selectedStock.change)}
+                    <div className="text-3xl font-bold text-white">₹{(selectedStock.price || selectedStock.last_price || stockDetails.lastPrice)?.toFixed(2)}</div>
+                    <div className={`text-lg font-medium ${(selectedStock.change || selectedStock.day_change_perc || stockDetails.dayChangePerc) >= 0 ? 'text-groww-green' : 'text-groww-red'}`}>
+                      {formatPercentage(selectedStock.change || selectedStock.day_change_perc || stockDetails.dayChangePerc)}
                     </div>
                   </div>
                 </div>
