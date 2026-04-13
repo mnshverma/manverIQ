@@ -6,7 +6,9 @@ import time
 
 try:
     from nselib import capital_market
-except:
+    print("nselib loaded successfully")
+except Exception as e:
+    print(f"nselib import error: {e}")
     capital_market = None
 
 try:
@@ -74,7 +76,7 @@ def get_top_movers_nselib():
         return None
     try:
         with st.spinner('Loading market data...'):
-            nifty_50 = capital_market.nifty五十()
+            nifty_50 = capital_market.nifty50_equity_list()
             df = pd.DataFrame(nifty_50)
             df = df.sort_values('pctChange', ascending=False)
             return df
@@ -86,7 +88,7 @@ def get_quote_nselib(symbol):
     if not capital_market:
         return None
     try:
-        quote = capital_market.nifty五十()
+        quote = capital_market.nifty50_equity_list()
         df = pd.DataFrame(quote)
         stock = df[df['symbol'] == symbol.upper()]
         if not stock.empty:
@@ -108,9 +110,9 @@ def get_historical_nselib(symbol):
 
 def search_stocks(query):
     if not capital_market:
-        return []
+        return pd.DataFrame()
     try:
-        quote = capital_market.nifty五十()
+        quote = capital_market.nifty50_equity_list()
         df = pd.DataFrame(quote)
         matches = df[
             df['symbol'].str.lower().str.contains(query.lower(), na=False) |
