@@ -145,12 +145,15 @@ if page == "Dashboard":
         st.markdown("---")
         st.subheader("📊 Weekly Movers")
         
-        movers = gainers[:5] + losers[:5]
-        cols = st.columns(5)
-        for i, s in enumerate(movers):
-            pc = s.get('pctChange', 0)
-            with cols[i]:
-                st.caption(f"**{s.get('symbol')}**\n{fmt_change(pc)}")
+        movers = (gainers[:5] if gainers else []) + (losers[:5] if losers else [])
+        
+        if movers:
+            cols = st.columns(min(5, len(movers)))
+            for i, s in enumerate(movers[:5]):
+                if i < len(cols):
+                    pc = s.get('pctChange', 0)
+                    with cols[i]:
+                        st.caption(f"**{s.get('symbol', '')}**\n{fmt_change(pc)}")
 
 elif page == "Stock Details":
     st.title("📊 Stock Details")
