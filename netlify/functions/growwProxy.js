@@ -49,7 +49,7 @@ async function growwFetch(apiKey, endpoint, queryParams = {}) {
     throw new Error(errorData.message || `Groww API error: ${response.status}`);
   }
 
-return response.json();
+  return response.json();
 }
 
 exports.handler = async (event) => {
