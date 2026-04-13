@@ -35,6 +35,7 @@ async function growwFetch(accessToken, endpoint, queryParams = {}) {
   });
 
   console.log('Groww API Request:', url.toString());
+  console.log('Auth header:', `Bearer ${accessToken.substring(0, 20)}...`);
 
   const response = await fetch(url.toString(), {
     method: 'GET',
@@ -47,6 +48,7 @@ async function growwFetch(accessToken, endpoint, queryParams = {}) {
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.log('API Error response:', errorText);
     let errorData;
     try {
       errorData = JSON.parse(errorText);
