@@ -1,0 +1,5 @@
+nselib>=0.3.0
+nsepython>=0.8.0
+nsetools>=1.0.0
+pandas>=2.0.0
+lxml>=4.9.0
