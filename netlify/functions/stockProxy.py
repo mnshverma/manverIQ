@@ -202,6 +202,9 @@ def handler(event, context):
     """
     Netlify Python function handler with CORS support.
     """
+    print("=== Python Function Invoked ===")
+    print("Event:", event)
+    
     action = event.get('queryStringParameters', {}).get('action', '')
     
     headers = {
