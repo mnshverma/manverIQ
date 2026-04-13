@@ -65,16 +65,19 @@ export default function MarketDashboard() {
   }, []);
 
   useEffect(() => {
-    if (selectedStock && chartContainerRef.current) {
+    if (selectedStock && chartContainerRef.current && candleData.length > 0) {
       initChart();
     }
+  }, [selectedStock, chartTimeframe, candleData]);
+
+  useEffect(() => {
     return () => {
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
       }
     };
-  }, [selectedStock, chartTimeframe, candleData]);
+  }, []);
 
   const loadInitialData = () => {
     const gainersList = popularStocks
@@ -269,14 +272,6 @@ export default function MarketDashboard() {
     })));
 
     chart.timeScale().fitContent();
-
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
   };
 
   const calculateSMAData = (data, period) => {
