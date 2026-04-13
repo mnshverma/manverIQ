@@ -485,8 +485,8 @@ export default function MarketDashboard() {
               </svg>
             </button>
           )}
-          {searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-groww-card border border-groww-border rounded-xl overflow-hidden z-50 shadow-xl">
+          {searchResults.length > 0 && searchResults[0]?.symbol && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-groww-card border border-groww-border rounded-xl overflow-hidden z-50 shadow-xl max-h-80 overflow-y-auto">
               {searchResults.map((stock, idx) => (
                 <button
                   key={idx}
@@ -499,19 +499,19 @@ export default function MarketDashboard() {
                       <BarChart3 className="w-4 h-4 text-groww-green" />
                     </div>
                     <div>
-                      <span className="text-white font-medium">{stock.symbol}</span>
-                      <span className="text-gray-400 ml-2 text-sm">{stock.name}</span>
+                      <span className="text-white font-medium">{stock.symbol || 'N/A'}</span>
+                      <span className="text-gray-400 ml-2 text-sm">{stock.name || 'Unknown'}</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-white">₹{(stock.price || stock.last_price)?.toFixed(2)}</span>
-                    <span className={`ml-2 text-sm ${(stock.change || stock.day_change_perc) >= 0 ? 'text-groww-green' : 'text-groww-red'}`}>
+                    <span className="text-white">₹{(stock.price || stock.last_price || 0)?.toFixed(2)}</span>
+                    <span className={`ml-2 text-sm ${(stock.change || stock.day_change_perc || 0) >= 0 ? 'text-groww-green' : 'text-groww-red'}`}>
                       {formatPercentage(stock.change || stock.day_change_perc)}
                     </span>
                   </div>
                 </button>
-                  ))}
-                </div>
+              ))}
+            </div>
           )}
         </form>
 
@@ -588,14 +588,14 @@ export default function MarketDashboard() {
                       <BarChart3 className="w-5 h-5 md:w-7 md:h-7 text-groww-green" />
                     </div>
                     <div>
-                      <h2 className="text-xl md:text-2xl font-bold text-white">{selectedStock.symbol}</h2>
-                      <p className="text-gray-400 text-sm">{selectedStock.name}</p>
+                      <h2 className="text-xl md:text-2xl font-bold text-white">{selectedStock?.symbol || 'N/A'}</h2>
+                      <p className="text-gray-400 text-sm">{selectedStock?.name || 'Unknown'}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-white">₹{(selectedStock.price || selectedStock.last_price || stockDetails.lastPrice)?.toFixed(2)}</div>
-                    <div className={`text-lg font-medium ${(selectedStock.change || selectedStock.day_change_perc || stockDetails.dayChangePerc) >= 0 ? 'text-groww-green' : 'text-groww-red'}`}>
-                      {formatPercentage(selectedStock.change || selectedStock.day_change_perc || stockDetails.dayChangePerc)}
+                    <div className="text-3xl font-bold text-white">₹{((selectedStock?.price || selectedStock?.last_price || stockDetails?.lastPrice) || 0)?.toFixed(2)}</div>
+                    <div className={`text-lg font-medium ${(selectedStock?.change || selectedStock?.day_change_perc || stockDetails?.dayChangePerc || 0) >= 0 ? 'text-groww-green' : 'text-groww-red'}`}>
+                      {formatPercentage(selectedStock?.change || selectedStock?.day_change_perc || stockDetails?.dayChangePerc)}
                     </div>
                   </div>
                 </div>
@@ -622,41 +622,14 @@ export default function MarketDashboard() {
                       <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
                         <Target className="w-3 h-3" />52W High
                       </div>
-                      <div className="text-white font-semibold">₹{stockDetails.high52?.toFixed(2)}</div>
-                    </div>
-                    <div className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
-                      <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
-                        <Target className="w-3 h-3" />52W Low
-                      </div>
-                      <div className="text-white font-semibold">₹{stockDetails.low52?.toFixed(2)}</div>
-                    </div>
-                    <div className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
-                      <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
-                        <Activity className="w-3 h-3" />Market Cap
-                      </div>
-                      <div className="text-white font-semibold">{formatMarketCap(stockDetails.marketCap)}</div>
-                    </div>
-                    <div className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
-                      <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
-                        <BarChart3 className="w-3 h-3" />P/E Ratio
-                      </div>
-                      <div className="text-white font-semibold">{stockDetails.pe?.toFixed(1)}</div>
-                    </div>
-                    <div className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
-                      <div className="text-gray-400 text-xs mb-2">Volume</div>
-                      <div className="text-white font-semibold">{formatVolume(stockDetails.volume)}</div>
-                    </div>
-                    <div className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
-                      <div className="text-gray-400 text-xs mb-2">Avg Volume</div>
-                      <div className="text-white font-semibold">{formatVolume(stockDetails.avgVolume)}</div>
-                    </div>
-                    <div className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
-                      <div className="text-gray-400 text-xs mb-2">Day High</div>
-                      <div className="text-white font-semibold">₹{stockDetails.dayHigh?.toFixed(2)}</div>
-                    </div>
-                    <div className="bg-groww-dark rounded-lg p-4 border border-groww-border/50">
-                      <div className="text-gray-400 text-xs mb-2">Day Low</div>
-                      <div className="text-white font-semibold">₹{stockDetails.dayLow?.toFixed(2)}</div>
+                      <div className="text-white font-semibold">₹{stockDetails?.high52?.toFixed(2) || 'N/A'}</div>
+                      <div className="text-white font-semibold">₹{stockDetails?.low52?.toFixed(2) || 'N/A'}</div>
+                      <div className="text-white font-semibold">{formatMarketCap(stockDetails?.marketCap)}</div>
+                      <div className="text-white font-semibold">{stockDetails?.pe?.toFixed(1) || 'N/A'}</div>
+                      <div className="text-white font-semibold">{formatVolume(stockDetails?.volume)}</div>
+                      <div className="text-white font-semibold">{formatVolume(stockDetails?.avgVolume)}</div>
+                      <div className="text-white font-semibold">₹{stockDetails?.dayHigh?.toFixed(2) || 'N/A'}</div>
+                      <div className="text-white font-semibold">₹{stockDetails?.dayLow?.toFixed(2) || 'N/A'}</div>
                     </div>
                   </div>
                 )}
