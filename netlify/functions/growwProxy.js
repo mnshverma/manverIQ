@@ -208,22 +208,12 @@ exports.handler = async (event) => {
       }
 
       case 'test':
-        try {
-          const testToken = await getAccessToken();
-          responseData = { 
-            status: 'ok', 
-            hasToken: !!testToken,
-            tokenPrefix: testToken ? testToken.substring(0, 15) + '...' : 'none',
-            usingSecret: !!GROWW_API_SECRET
-          };
-        } catch (e) {
-          responseData = { 
-            status: 'error',
-            envConfigured: !!GROWW_ACCESS_TOKEN,
-            hasSecret: !!GROWW_API_SECRET,
-            error: e.message
-          };
-        }
+        const testToken = await getAccessToken();
+        responseData = { 
+          status: 'ok', 
+          hasToken: !!testToken,
+          tokenPrefix: testToken ? testToken.substring(0, 15) + '...' : 'none'
+        };
         break;
 
       default:
@@ -246,8 +236,7 @@ exports.handler = async (event) => {
       headers, 
       body: JSON.stringify({ 
         error: error.message,
-        hasApiKey: !!GROWW_ACCESS_TOKEN,
-        hasSecret: !!GROWW_API_SECRET
+        hasToken: !!GROWW_ACCESS_TOKEN
       }) 
     };
   }
