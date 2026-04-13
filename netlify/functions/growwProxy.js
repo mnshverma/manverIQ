@@ -1,7 +1,43 @@
 const GROWW_API_BASE = 'https://api.groww.in/v1';
+const GROWW_API_KEY = process.env.GROWW_API_KEY;
+const GROWW_API_SECRET = process.env.GROWW_API_SECRET;
 
 const CACHE_TTL = 5 * 60 * 1000;
 const CANDLE_CACHE_TTL = 15 * 60 * 1000;
+
+let accessToken = null;
+let tokenExpiry = 0;
+
+async function generateAccessToken() {
+  if (accessToken && Date.now() < tokenExpiry) {
+    return accessToken;
+  }
+  
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  console.log('Generating token with timestamp:', timestamp);
+  
+  const response = await fetch(`${GROWW_API_BASE}/token/api/access`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${GROWW_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      key_type: 'approval',
+      checksum: GROWW_API_SECRET || timestamp,
+      timestamp: timestamp
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to generate access token: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  accessToken = data.token;
+  tokenExpiry = Date.now() + (23 * 60 * 60 * 1000);
+  return accessToken;
+}
 
 const cache = {
   topGainers: { data: null, timestamp: 0 },
@@ -21,7 +57,7 @@ function getCache(key) {
   return null;
 }
 
-async function growwFetch(apiKey, endpoint, queryParams = {}) {
+async function growwFetch(token, endpoint, queryParams = {}) {
   const url = new URL(`${GROWW_API_BASE}${endpoint}`);
   Object.entries(queryParams).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
@@ -29,10 +65,12 @@ async function growwFetch(apiKey, endpoint, queryParams = {}) {
     }
   });
 
+  console.log('Groww API Request:', url.toString());
+
   const response = await fetch(url.toString(), {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${token}`,
       'Accept': 'application/json',
       'X-API-VERSION': '1.0'
     }
@@ -65,12 +103,12 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: '' };
   }
 
-  const apiKey = process.env.GROWW_API_KEY;
-  if (!apiKey) {
+  if (!GROWW_API_KEY) {
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'GROWW_API_KEY not configured' }) };
   }
 
   try {
+    const token = await generateAccessToken();
     let responseData;
 
     switch (action) {
@@ -85,9 +123,9 @@ exports.handler = async (event) => {
           return { statusCode: 200, headers, body: JSON.stringify(cachedQuote) };
         }
 
-        const quoteResponse = await growwFetch(apiKey, '/live-data/quote', {
-          exchange: exchange || 'NSE',
-          segment: segment || 'CASH',
+        const quoteResponse = await growwFetch(token, '/live-data/quote', {
+          exchange: 'NSE',
+          segment: 'CASH',
           trading_symbol: symbol
         });
         
@@ -100,9 +138,9 @@ exports.handler = async (event) => {
           return { statusCode: 400, headers, body: JSON.stringify({ error: 'Symbol required' }) };
         }
         
-        const ltpResponse = await growwFetch(apiKey, '/live-data/ltp', {
-          segment: segment || 'CASH',
-          exchange_symbols: `NSE:${symbol}`
+        const ltpResponse = await growwFetch(token, '/live-data/ltp', {
+          segment: 'CASH',
+          exchange_symbols: `NSE_${symbol}`
         });
         responseData = ltpResponse;
         break;
@@ -122,7 +160,7 @@ exports.handler = async (event) => {
         const endTimeMs = endTime ? parseInt(endTime) : Math.floor(Date.now());
         const startTimeMs = startTime ? parseInt(startTime) : endTimeMs - (100 * 24 * 60 * 60 * 1000);
         
-        const candleResponse = await growwFetch(apiKey, '/historical/candle/range', {
+        const candleResponse = await growwFetch(token, '/historical/candle/range', {
           trading_symbol: symbol,
           exchange: exchange || 'NSE',
           segment: segment || 'CASH',
@@ -142,7 +180,7 @@ exports.handler = async (event) => {
         }
         
         if (!cache.instruments.data) {
-          const instrumentsResponse = await growwFetch(apiKey, '/instruments');
+          const instrumentsResponse = await growwFetch(token, '/instruments');
           cache.instruments = { data: instrumentsResponse, timestamp: Date.now() };
         }
         
@@ -169,9 +207,9 @@ exports.handler = async (event) => {
           'ASIANPAINT', 'MARUTI', 'TITAN', 'ULTRACEMCO', 'SUNPHARMA', 'ONGC'
         ];
         
-        const ltpResponse = await growwFetch(apiKey, '/live-data/ltp', {
+        const ltpResponse = await growwFetch(token, '/live-data/ltp', {
           segment: 'CASH',
-          exchange_symbols: 'NSE:' + popularSymbols.join(',NSE:')
+          exchange_symbols: 'NSE_' + popularSymbols.join(',NSE_')
         });
         
         const quotesArray = Object.entries(ltpResponse).map(([key, value]) => ({
@@ -201,11 +239,21 @@ exports.handler = async (event) => {
       }
 
       case 'test':
-        responseData = { 
-          status: 'ok', 
-          envConfigured: !!process.env.GROWW_API_KEY,
-          envKeyPrefix: process.env.GROWW_API_KEY ? process.env.GROWW_API_KEY.substring(0, 8) + '...' : 'NOT_SET'
-        };
+        try {
+          const testToken = await generateAccessToken();
+          responseData = { 
+            status: 'ok', 
+            envConfigured: !!GROWW_API_KEY,
+            hasToken: !!testToken,
+            tokenPrefix: testToken ? testToken.substring(0, 20) + '...' : 'NOT_SET'
+          };
+        } catch (e) {
+          responseData = { 
+            status: 'error', 
+            envConfigured: !!GROWW_API_KEY,
+            error: e.message
+          };
+        }
         break;
 
       default:
