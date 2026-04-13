@@ -14,10 +14,10 @@ async function getAccessToken() {
   }
   
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const checksum = crypto.createHash('md5').update(GROWW_API_SECRET + timestamp).digest('hex');
+  const checksum = crypto.createHash('sha256').update(GROWW_API_SECRET + timestamp).digest('hex');
   
   console.log('Generating token, timestamp:', timestamp);
-  console.log('Checksum (md5):', checksum);
+  console.log('Checksum (sha256):', checksum);
   
   const response = await fetch(`${GROWW_API_BASE}/token/api/access`, {
     method: 'POST',
